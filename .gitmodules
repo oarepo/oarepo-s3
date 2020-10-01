@@ -1,0 +1,3 @@
+[submodule "3rdparty/s3-client"]
+	path = 3rdparty/s3-client
+	url = git@github.com:CESNET/s3-client
