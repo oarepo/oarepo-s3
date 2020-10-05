@@ -28,6 +28,7 @@ tests_require = [
     'pytest-pep8>=1.0.6',
     'pytest>=4.6.4,<5.0.0',
     'redis>=2.10.5',
+    'oarepo-records-draft>=5.0.0a18'
 ]
 
 extras_require = {

@@ -40,8 +40,9 @@ more detailed description in :any:`configuration`.
 
 """
 
-S3_CLIENT = 'oarepo_s3.s3.S3Client'
-"""S3 client class to be used for communication with AWS S3 APIs."""
+from flask import current_app
+from werkzeug.local import LocalProxy
 
-S3_MULTIPART_UPLOAD_EXPIRATION = 3600 * 24
-"""A number of seconds after which the upload should expire."""
+from oarepo_s3.ext import OARepoS3State
+
+current_s3: OARepoS3State = LocalProxy(lambda: current_app.extensions['oarepo-s3'])

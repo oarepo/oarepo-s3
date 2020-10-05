@@ -39,22 +39,49 @@ more detailed description in :any:`configuration`.
   Javascript library.
 
 """
+
 from flask import current_app
+from webargs import fields
+from webargs.flaskparser import use_kwargs
 
 from oarepo_s3.utils import multipart_init_response_factory
+
+multipart_init_args = {
+    'size': fields.Int(
+        locations=('query', 'json', 'form'),
+        missing=None,
+    ),
+    'part_size': fields.Int(
+        locations=('query', 'json', 'form'),
+        missing=None,
+        load_from='partSize',
+        data_key='partSize',
+    ),
+}
 
 
 class MultipartUpload(object):
     """Class representing a multipart file upload to S3."""
-    def __init__(self, key, expires):
+
+    def __init__(self, key, expires, size, part_size=None, complete_url=None):
         self.key = key
         self.expires = expires
         self.uploadId = None
+        self.size = size
+        self.part_size = part_size
+        self.session = {}
 
 
-def multipart_uploader(record, key, files, pid, request, resolver):
+@use_kwargs(multipart_init_args)
+def multipart_uploader(record, key, files, pid, request, resolver, size=None, part_size=None):
     """Multipart upload handler."""
     expiration = current_app.config['S3_MULTIPART_UPLOAD_EXPIRATION']
-    mu = MultipartUpload(key=key, expires=expiration)
+    complete = resolver('complete')
+    mu = MultipartUpload(key=key,
+                         expires=expiration,
+                         size=size,
+                         part_size=part_size,
+                         complete_url=complete)
     files[key] = mu
-    return multipart_init_response_factory(mu)
+    files[key]['multipart_upload'] = mu.session
+    return multipart_init_response_factory(files[key])

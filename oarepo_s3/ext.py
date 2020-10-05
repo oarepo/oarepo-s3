@@ -39,8 +39,27 @@ more detailed description in :any:`configuration`.
   Javascript library.
 
 """
+from flask import current_app
+from invenio_base.utils import obj_or_import_string
 
 from . import config
+
+
+class OARepoS3State(object):
+    """OARepo-S3 extension state."""
+
+    def __init__(self, app):
+        """Initialize the state."""
+        self.app = app
+
+    @property
+    def client(self):
+        client = obj_or_import_string(self.app.config['S3_CLIENT'])
+        s3_info = current_app.extensions['invenio-s3'].init_s3fs_info
+        return client(access_key=s3_info['key'],
+                      secret_key=s3_info['secret'],
+                      client_kwargs=s3_info['client_kwargs'],
+                      config_kwargs=s3_info['config_kwargs'])
 
 
 class OARepoS3(object):
@@ -54,7 +73,8 @@ class OARepoS3(object):
     def init_app(self, app):
         """Flask application initialization."""
         self.init_config(app)
-        app.extensions['oarepo-s3'] = self
+        _state = OARepoS3State(app)
+        app.extensions['oarepo-s3'] = _state
 
     def init_config(self, app):
         """Initialize configuration."""

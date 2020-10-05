@@ -9,35 +9,202 @@ from __future__ import absolute_import, print_function
 
 import hashlib
 import os
+import shutil
+import sys
+import uuid
 from io import BytesIO
 
 import boto3
 import pytest
-from flask import current_app
+from flask import current_app, Flask, url_for
+from flask.testing import FlaskClient
 from invenio_app.factory import create_api
+from invenio_base.signals import app_loaded
+from invenio_db import InvenioDB, db as _db
+from invenio_files_rest import InvenioFilesREST
 from invenio_files_rest.models import Bucket, Location
+from invenio_indexer import InvenioIndexer
+from invenio_indexer.api import RecordIndexer
+from invenio_jsonschemas import InvenioJSONSchemas
+from invenio_pidstore import InvenioPIDStore
+from invenio_pidstore.models import PersistentIdentifier, PIDStatus
+from invenio_records import InvenioRecords
 from invenio_records_files.api import Record
+from invenio_records_rest import InvenioRecordsREST
+from invenio_records_rest.utils import PIDConverter
+from invenio_rest import InvenioREST
+from invenio_s3 import InvenioS3
+from invenio_search import InvenioSearch, current_search_client
+from invenio_search.cli import destroy, init
+from marshmallow import Schema, fields, INCLUDE
 from moto import mock_s3
+from oarepo_records_draft.ext import RecordsDraft
+from oarepo_validate import SchemaKeepingRecordMixin, MarshmallowValidatedRecordMixin
+from s3_client_lib.utils import get_file_chunk_size
+from sqlalchemy_utils import database_exists, create_database
 
 from oarepo_s3 import S3FileStorage
+from oarepo_s3.ext import OARepoS3
+from oarepo_s3.s3 import S3Client
+
+SAMPLE_ALLOWED_SCHEMAS = ['http://localhost:5000/sample/sample-v1.0.0.json']
+SAMPLE_PREFERRED_SCHEMA = 'http://localhost:5000/sample/sample-v1.0.0.json'
+
+
+class TestSchemaV1(Schema):
+    """Testing record schema."""
+    title = fields.String()
+
+    class Meta:
+        unknown = INCLUDE
+
+
+class TestRecord(SchemaKeepingRecordMixin,
+                 MarshmallowValidatedRecordMixin,
+                 Record):
+    """Fake test record."""
+    ALLOWED_SCHEMAS = SAMPLE_ALLOWED_SCHEMAS
+    PREFERRED_SCHEMA = SAMPLE_PREFERRED_SCHEMA
+    MARSHMALLOW_SCHEMA = TestSchemaV1
+
+
+class MockedS3Client(S3Client):
+    """Fake S3 client."""
+
+    def init_multipart_upload(self, bucket, object_name, object_size):
+        """Fake init multipart upload implementation."""
+        max_parts, chunk_size = get_file_chunk_size(object_size)
+        return {"parts_url": [f'http://localhost/test/{i}' for i in range(1, max_parts + 1)],
+                "chunk_size": chunk_size,
+                "checksum_update": "",
+                "upload_id": uuid.uuid4(),
+                "origin": "",
+                "num_chunks": max_parts,
+                "finish_url": ""
+                }
+
+    def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
+        """Faked complete of a multipart upload to AWS S3."""
+        return {}
+
+    def abort_multipart_upload(self, bucket, object_name, upload_id):
+        """Faked cancel of an in-progress multipart upload to AWS S3."""
+        return {}
+
+
+class JsonClient(FlaskClient):
+    def open(self, *args, **kwargs):
+        kwargs.setdefault('content_type', 'application/json')
+        kwargs.setdefault('Accept', 'application/json')
+        return super().open(*args, **kwargs)
+
+
+@pytest.fixture(scope='module')
+def base_app(app_config):
+    """Flask applicat-ion fixture."""
+    instance_path = os.path.join(sys.prefix, 'var', 'test-instance')
+
+    # empty the instance path
+    if os.path.exists(instance_path):
+        shutil.rmtree(instance_path)
+    os.makedirs(instance_path)
+
+    os.environ['INVENIO_INSTANCE_PATH'] = instance_path
+
+    app_ = Flask('oarepo-s3-testapp', instance_path=instance_path)
+    app_.config.update(
+        TESTING=True,
+        JSON_AS_ASCII=True,
+        SQLALCHEMY_TRACK_MODIFICATIONS=True,
+        SQLALCHEMY_DATABASE_URI=os.environ.get(
+            'SQLALCHEMY_DATABASE_URI',
+            'sqlite:///:memory:'),
+        SERVER_NAME='localhost:5000',
+        SECURITY_PASSWORD_SALT='TEST_SECURITY_PASSWORD_SALT',
+        SECRET_KEY='TEST_SECRET_KEY',
+        INVENIO_INSTANCE_PATH=instance_path,
+        SEARCH_INDEX_PREFIX='test-',
+        RECORDS_REST_ENDPOINTS={},
+        FILES_REST_DEFAULT_STORAGE_CLASS='S',
+        JSONSCHEMAS_HOST='localhost:5000',
+        SEARCH_ELASTIC_HOSTS=os.environ.get('SEARCH_ELASTIC_HOSTS', None)
+    )
+    app_.config.update(**app_config)
+    app.test_client_class = JsonClient
+
+    from oarepo_s3 import config  # noqa
+
+    InvenioDB(app_)
+    InvenioFilesREST(app_)
+    InvenioS3(app_)
+    InvenioIndexer(app_)
+    InvenioSearch(app_)
+    RecordsDraft(app_)
+    OARepoS3(app_)
+
+    return app_
+
+
+@pytest.yield_fixture()
+def app(base_app):
+    """Flask application fixture."""
+    base_app._internal_jsonschemas = InvenioJSONSchemas(base_app)
+    InvenioREST(base_app)
+    InvenioRecordsREST(base_app)
+    InvenioRecords(base_app)
+    InvenioPIDStore(base_app)
+    base_app.url_map.converters['pid'] = PIDConverter
+
+    # base_app.register_blueprint(invenio_records_rest.views.create_blueprint_from_app(base_app))
+
+    app_loaded.send(None, app=base_app)
+
+    with base_app.app_context():
+        yield base_app
+
+
+@pytest.fixture
+def db(app):
+    """Create database for the tests."""
+    with app.app_context():
+        if not database_exists(str(_db.engine.url)) and \
+            app.config['SQLALCHEMY_DATABASE_URI'] != 'sqlite://':
+            create_database(_db.engine.url)
+        _db.create_all()
+
+    yield _db
+
+    # Explicitly close DB connection
+    _db.session.close()
+    _db.drop_all()
+
+
+@pytest.yield_fixture()
+def client(app):
+    """Get test client."""
+    with app.test_client() as client:
+        print(app.url_map)
+        yield client
 
 
 @pytest.fixture(scope='module')
 def app_config(app_config):
     """Customize application configuration."""
-    from invenio_records_files.api import Record as RecordFiles
-
     app_config[
         'FILES_REST_STORAGE_FACTORY'] = 'oarepo_s3.storage.s3_storage_factory'
     app_config['S3_ENDPOINT_URL'] = None
+    app_config['S3_CLIENT'] = 'conftest.MockedS3Client'
     app_config['S3_ACCESS_KEY_ID'] = 'test'
     app_config['S3_SECRECT_ACCESS_KEY'] = 'test'
     app_config['FILES_REST_MULTIPART_CHUNKSIZE_MIN'] = 1024 * 1024 * 6
     # Endpoint with files support
-    app_config['RECORDS_REST_ENDPOINTS'] = {
+    app_config['RECORDS_DRAFT_ENDPOINTS'] = {
         'recid': {
+            'draft': 'drecid',
             'pid_type': 'recid',
-            'record_class': RecordFiles,
+            'pid_minter': 'recid',
+            'pid_fetcher': 'recid',
+            'record_class': 'conftest.TestRecord',
             'record_serializers': {
                 'application/json': (),
             },
@@ -50,6 +217,16 @@ def app_config(app_config):
             'item_route': '/records/<pid(recid, '
                           'record_class="invenio_records_files.api.Record"):pid_value>',
             'indexer_class': None
+        },
+        'drecid': {
+            'create_permission_factory_imp': 'allow_all',
+            'delete_permission_factory_imp': 'allow_all',
+            'update_permission_factory_imp': 'allow_all',
+            'files': {
+                'put_file_factory': 'allow_all',
+                'get_file_factory': 'allow_all',
+                'delete_file_factory': 'allow_all'
+            }
         }
     }
 
@@ -63,6 +240,42 @@ def app_config(app_config):
     ))
 
     return app_config
+
+
+@pytest.fixture(scope='module')
+def draft_config(app_config):
+    app_config['RECORDS_DRAFT_ENDPOINTS'] = app_config['RECORDS_REST_ENDPOINTS']
+    app_config['RECORDS_DRAFT_ENDPOINTS'].update(
+        dict(
+            recid=dict(
+                draft='drecid'
+            ),
+            drecid=dict(
+
+            )
+        ))
+    app_config['RECORDS_REST_ENDPOINTS'] = {}
+    return app_config
+
+
+@pytest.fixture()
+def prepare_es(app, db):
+    runner = app.test_cli_runner()
+    result = runner.invoke(destroy, ['--yes-i-know', '--force'])
+    if result.exit_code:
+        print(result.output, file=sys.stderr)
+    assert result.exit_code == 0
+    result = runner.invoke(init)
+    if result.exit_code:
+        print(result.output, file=sys.stderr)
+    assert result.exit_code == 0
+
+
+@pytest.fixture(scope='module')
+def draft_app(app, draft_config):
+    app.config.update(**draft_config)
+    app.config['RECORDS_REST_ENDPOINTS'] = {}
+    RecordsDraft(app)
 
 
 @pytest.fixture(scope='module')
@@ -111,6 +324,33 @@ def file_instance_mock(s3_testpath):
         uri=s3_testpath,
         size=4,
         updated=None)
+
+
+@pytest.fixture
+def draft_records_url(app):
+    return url_for('oarepo_records_rest.draft_records_list')
+
+
+@pytest.fixture()
+def draft_record(app, db, schemas, mappings, prepare_es):
+    # let's create a record
+    draft_uuid = uuid.uuid4()
+    data = {
+        'title': 'blah',
+        '$schema': schemas['draft'],
+        'id': '1'
+    }
+    PersistentIdentifier.create(
+        pid_type='drecid', pid_value='1', status=PIDStatus.REGISTERED,
+        object_type='rec', object_uuid=draft_uuid
+    )
+    rec = Record.create(data, id_=draft_uuid)
+
+    RecordIndexer().index(rec)
+    current_search_client.indices.refresh()
+    current_search_client.indices.flush()
+
+    return rec
 
 
 @pytest.fixture()
@@ -170,12 +410,7 @@ def bucket(db, s3_location):
 def generic_file(db, app, record):
     """Add a generic file to the record."""
     stream = BytesIO(b'test example')
-    filename = 'generic_file.txt'
-    record.files[filename] = stream
-    record.files.dumps()
-    record.commit()
-    db.session.commit()
-    return filename
+    return stream
 
 
 @pytest.fixture()

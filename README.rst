@@ -22,7 +22,7 @@
 .. image:: https://img.shields.io/github/license/oarepo/oarepo-s3.svg
         :target: https://github.com/oarepo/oarepo-s3/blob/master/LICENSE
 
-S3 file storage support for Invenio.
+S3 file storage support for OARepo.
 
 The package offers integration with any S3 REST API compatible object storage.
 

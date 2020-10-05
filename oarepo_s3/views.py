@@ -39,9 +39,57 @@ more detailed description in :any:`configuration`.
   Javascript library.
 
 """
+from flask import abort, jsonify
+from flask.views import MethodView
+from invenio_records_rest.views import pass_record
+from webargs import fields
+from webargs.flaskparser import use_kwargs
 
-S3_CLIENT = 'oarepo_s3.s3.S3Client'
-"""S3 client class to be used for communication with AWS S3 APIs."""
+from oarepo_s3.api import MultipartUpload
+from oarepo_s3.proxies import current_s3
 
-S3_MULTIPART_UPLOAD_EXPIRATION = 3600 * 24
-"""A number of seconds after which the upload should expire."""
+multipart_complete_args = {
+    'parts': fields.List(
+        fields.Dict,
+        locations=('json', 'form'))
+}
+
+
+class MultipartUploadCompleteResource(MethodView):
+    """Complete multipart upload method view."""
+    view_name = '{0}_upload_complete'
+
+    @pass_record
+    @use_kwargs('multipart_complete_parts')
+    def post(self, pid, record, key, parts):
+        file_rec = record.files[key]
+        if not isinstance(file_rec, MultipartUpload):
+            abort(400, 'resource is not a multipart upload')
+
+        upload = file_rec.session
+        res = current_s3.client.complete_multipart_upload(
+            upload['bucket'],
+            file_rec.key,
+            parts,
+            upload['upload_id'])
+
+        return jsonify(res.dumps())
+
+
+class MultipartUploadAbortResource(MethodView):
+    """Cancel a multipart upload method view."""
+    view_name = '{0}_upload_cancel'
+
+    @pass_record
+    def post(self, pid, record, key):
+        file_rec = record.files[key]
+        if not isinstance(file_rec, MultipartUpload):
+            abort(400, 'resource is not a multipart upload')
+
+        upload = file_rec.session
+        res = current_s3.client.abort_multipart_upload(
+            upload['bucket'],
+            file_rec.key,
+            upload['upload_id'])
+
+        return jsonify(res.dumps())

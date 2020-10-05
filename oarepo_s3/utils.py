@@ -11,11 +11,11 @@ This file is imported by ``oarepo_s3.__init__``,
 and parsed by ``setup.py``.
 """
 
-def multipart_init_response_factory(multipartUpload):
-    """Factory for creation of multipart initialization response."""
-    def _multipart_init_response():
-        """Response for multipart S3 upload init request"""
-        # TODO: serialize mu to json
-        return multipartUpload
 
-    return _multipart_init_response
+def multipart_init_response_factory(file_obj):
+    """Factory for creation of multipart initialization response."""
+    def inner():
+        """Response for multipart S3 upload init request"""
+        return file_obj.dumps()
+
+    return inner
