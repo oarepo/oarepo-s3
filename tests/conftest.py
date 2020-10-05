@@ -15,6 +15,7 @@ import uuid
 from io import BytesIO
 
 import boto3
+import invenio_records_rest
 import pytest
 from flask import current_app, Flask, url_for
 from flask.testing import FlaskClient
@@ -31,7 +32,8 @@ from invenio_pidstore.models import PersistentIdentifier, PIDStatus
 from invenio_records import InvenioRecords
 from invenio_records_files.api import Record
 from invenio_records_rest import InvenioRecordsREST
-from invenio_records_rest.utils import PIDConverter
+from invenio_records_rest.utils import PIDConverter, allow_all
+from invenio_records_rest.views import create_blueprint_from_app
 from invenio_rest import InvenioREST
 from invenio_s3 import InvenioS3
 from invenio_search import InvenioSearch, current_search_client
@@ -145,7 +147,7 @@ def base_app(app_config):
     return app_
 
 
-@pytest.yield_fixture()
+@pytest.yield_fixture(scope='module')
 def app(base_app):
     """Flask application fixture."""
     base_app._internal_jsonschemas = InvenioJSONSchemas(base_app)
@@ -154,8 +156,7 @@ def app(base_app):
     InvenioRecords(base_app)
     InvenioPIDStore(base_app)
     base_app.url_map.converters['pid'] = PIDConverter
-
-    # base_app.register_blueprint(invenio_records_rest.views.create_blueprint_from_app(base_app))
+    base_app.register_blueprint(create_blueprint_from_app(base_app))
 
     app_loaded.send(None, app=base_app)
 
@@ -198,13 +199,15 @@ def app_config(app_config):
     app_config['S3_SECRECT_ACCESS_KEY'] = 'test'
     app_config['FILES_REST_MULTIPART_CHUNKSIZE_MIN'] = 1024 * 1024 * 6
     # Endpoint with files support
+    print(TestRecord.__module__)
+
     app_config['RECORDS_DRAFT_ENDPOINTS'] = {
         'recid': {
             'draft': 'drecid',
             'pid_type': 'recid',
             'pid_minter': 'recid',
             'pid_fetcher': 'recid',
-            'record_class': 'conftest.TestRecord',
+            'record_class': 'conftest:TestRecord',
             'record_serializers': {
                 'application/json': (),
             },
@@ -219,13 +222,13 @@ def app_config(app_config):
             'indexer_class': None
         },
         'drecid': {
-            'create_permission_factory_imp': 'allow_all',
-            'delete_permission_factory_imp': 'allow_all',
-            'update_permission_factory_imp': 'allow_all',
+            'create_permission_factory_imp': allow_all,
+            'delete_permission_factory_imp': allow_all,
+            'update_permission_factory_imp': allow_all,
             'files': {
-                'put_file_factory': 'allow_all',
-                'get_file_factory': 'allow_all',
-                'delete_file_factory': 'allow_all'
+                'put_file_factory': allow_all,
+                'get_file_factory': allow_all,
+                'delete_file_factory': allow_all
             }
         }
     }
