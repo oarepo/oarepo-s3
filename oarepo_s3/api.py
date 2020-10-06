@@ -39,12 +39,10 @@ more detailed description in :any:`configuration`.
   Javascript library.
 
 """
-
 from flask import current_app
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
-from oarepo_s3.utils import multipart_init_response_factory
 
 multipart_init_args = {
     'size': fields.Int(
@@ -60,28 +58,53 @@ multipart_init_args = {
 }
 
 
+def multipart_init_response_factory(file_obj):
+    """Factory for creation of multipart initialization response."""
+
+    def inner():
+        """Response for multipart S3 upload init request"""
+        return file_obj.dumps()
+
+    return inner
+
+
 class MultipartUpload(object):
     """Class representing a multipart file upload to S3."""
 
-    def __init__(self, key, expires, size, part_size=None, complete_url=None):
+    def __init__(self, key, expires, size,
+                 part_size=None, complete_url=None, abort_url=None):
+        """Initialize a multipart-upload session."""
         self.key = key
         self.expires = expires
         self.uploadId = None
         self.size = size
         self.part_size = part_size
         self.session = {}
+        self.complete_url = complete_url
+        self.abort_url = abort_url
 
 
 @use_kwargs(multipart_init_args)
 def multipart_uploader(record, key, files, pid, request, resolver, size=None, part_size=None):
     """Multipart upload handler."""
+    from oarepo_s3.views import MultipartUploadCompleteResource, MultipartUploadAbortResource
+
     expiration = current_app.config['S3_MULTIPART_UPLOAD_EXPIRATION']
-    complete = resolver('complete')
+    complete = resolver(MultipartUploadCompleteResource.view_name)
+    abort = resolver(MultipartUploadAbortResource.view_name)
+
     mu = MultipartUpload(key=key,
                          expires=expiration,
                          size=size,
                          part_size=part_size,
-                         complete_url=complete)
+                         complete_url=complete,
+                         abort_url=abort)
+
     files[key] = mu
-    files[key]['multipart_upload'] = mu.session
+    files[key]['multipart_upload'] = dict(
+        **mu.session,
+        complete_url=mu.complete_url,
+        abort_url=mu.abort_url
+    )
+
     return multipart_init_response_factory(files[key])

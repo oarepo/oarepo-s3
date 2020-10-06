@@ -78,7 +78,7 @@ class MultipartUploadCompleteResource(MethodView):
 
 class MultipartUploadAbortResource(MethodView):
     """Cancel a multipart upload method view."""
-    view_name = '{0}_upload_cancel'
+    view_name = '{0}_upload_abort'
 
     @pass_record
     def post(self, pid, record, key):

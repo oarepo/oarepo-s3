@@ -4,7 +4,7 @@
 #
 # oarepo-s3 is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
-"""Storage tests."""
+"""API tests."""
 
 from __future__ import absolute_import, print_function
 
@@ -21,8 +21,12 @@ def test_multipart_uploader(app, record):
     fsize = 1024 * 1024 * 512
     files = record.files
     request.args = ImmutableMultiDict({'size': fsize})
-    res = multipart_uploader(record=record, key='test', files=files, pid=None, request=None,
-                             resolver=lambda name, **kwargs: 'http://localhost/records/1/{}'.format(name))
+
+    def _resolver(name, **kwargs):
+        return 'http://localhost/records/1/{}'.format(name)
+
+    res = multipart_uploader(record=record, key='test', files=files,
+                             pid=None, request=None, resolver=_resolver)
     assert res is not None
     assert callable(res)
 
@@ -30,8 +34,10 @@ def test_multipart_uploader(app, record):
     file_rec['testparam'] = 'test'
 
     response = res()
-    assert response.get('multipart_upload', None) is not None
     assert response['testparam'] == 'test'
+    assert response.get('multipart_upload', None) is not None
+    assert response['multipart_upload']['complete_url'] == _resolver('{0}_upload_complete')
+    assert response['multipart_upload']['abort_url'] == _resolver('{0}_upload_abort')
 
     multi = response['multipart_upload']
     assert isinstance(response, dict)

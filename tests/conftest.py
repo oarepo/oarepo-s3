@@ -15,7 +15,7 @@ import uuid
 from io import BytesIO
 
 import boto3
-import invenio_records_rest
+import pkg_resources
 import pytest
 from flask import current_app, Flask, url_for
 from flask.testing import FlaskClient
@@ -25,7 +25,6 @@ from invenio_db import InvenioDB, db as _db
 from invenio_files_rest import InvenioFilesREST
 from invenio_files_rest.models import Bucket, Location
 from invenio_indexer import InvenioIndexer
-from invenio_indexer.api import RecordIndexer
 from invenio_jsonschemas import InvenioJSONSchemas
 from invenio_pidstore import InvenioPIDStore
 from invenio_pidstore.models import PersistentIdentifier, PIDStatus
@@ -36,9 +35,10 @@ from invenio_records_rest.utils import PIDConverter, allow_all
 from invenio_records_rest.views import create_blueprint_from_app
 from invenio_rest import InvenioREST
 from invenio_s3 import InvenioS3
-from invenio_search import InvenioSearch, current_search_client
+from invenio_search import InvenioSearch
 from invenio_search.cli import destroy, init
 from marshmallow import Schema, fields, INCLUDE
+from mock import patch
 from moto import mock_s3
 from oarepo_records_draft.ext import RecordsDraft
 from oarepo_validate import SchemaKeepingRecordMixin, MarshmallowValidatedRecordMixin
@@ -48,6 +48,7 @@ from sqlalchemy_utils import database_exists, create_database
 from oarepo_s3 import S3FileStorage
 from oarepo_s3.ext import OARepoS3
 from oarepo_s3.s3 import S3Client
+from tests.utils import draft_entrypoints
 
 SAMPLE_ALLOWED_SCHEMAS = ['http://localhost:5000/sample/sample-v1.0.0.json']
 SAMPLE_PREFERRED_SCHEMA = 'http://localhost:5000/sample/sample-v1.0.0.json'
@@ -184,7 +185,7 @@ def db(app):
 def client(app):
     """Get test client."""
     with app.test_client() as client:
-        print(app.url_map)
+        # print(app.url_map)
         yield client
 
 
@@ -194,20 +195,18 @@ def app_config(app_config):
     app_config[
         'FILES_REST_STORAGE_FACTORY'] = 'oarepo_s3.storage.s3_storage_factory'
     app_config['S3_ENDPOINT_URL'] = None
-    app_config['S3_CLIENT'] = 'conftest.MockedS3Client'
+    app_config['S3_CLIENT'] = 'tests.conftest.MockedS3Client'
     app_config['S3_ACCESS_KEY_ID'] = 'test'
     app_config['S3_SECRECT_ACCESS_KEY'] = 'test'
     app_config['FILES_REST_MULTIPART_CHUNKSIZE_MIN'] = 1024 * 1024 * 6
-    # Endpoint with files support
-    print(TestRecord.__module__)
-
+    # Endpoint with draft files support
     app_config['RECORDS_DRAFT_ENDPOINTS'] = {
         'recid': {
             'draft': 'drecid',
             'pid_type': 'recid',
             'pid_minter': 'recid',
             'pid_fetcher': 'recid',
-            'record_class': 'conftest:TestRecord',
+            'record_class': 'tests.conftest:TestRecord',
             'record_serializers': {
                 'application/json': (),
             },
@@ -274,11 +273,11 @@ def prepare_es(app, db):
     assert result.exit_code == 0
 
 
-@pytest.fixture(scope='module')
-def draft_app(app, draft_config):
-    app.config.update(**draft_config)
-    app.config['RECORDS_REST_ENDPOINTS'] = {}
+@pytest.fixture()
+@patch('pkg_resources.iter_entry_points', draft_entrypoints)
+def draft_app(app):
     RecordsDraft(app)
+    return app
 
 
 @pytest.fixture(scope='module')
@@ -332,28 +331,6 @@ def file_instance_mock(s3_testpath):
 @pytest.fixture
 def draft_records_url(app):
     return url_for('oarepo_records_rest.draft_records_list')
-
-
-@pytest.fixture()
-def draft_record(app, db, schemas, mappings, prepare_es):
-    # let's create a record
-    draft_uuid = uuid.uuid4()
-    data = {
-        'title': 'blah',
-        '$schema': schemas['draft'],
-        'id': '1'
-    }
-    PersistentIdentifier.create(
-        pid_type='drecid', pid_value='1', status=PIDStatus.REGISTERED,
-        object_type='rec', object_uuid=draft_uuid
-    )
-    rec = Record.create(data, id_=draft_uuid)
-
-    RecordIndexer().index(rec)
-    current_search_client.indices.refresh()
-    current_search_client.indices.flush()
-
-    return rec
 
 
 @pytest.fixture()
@@ -426,3 +403,20 @@ def record(app, db, s3_location):
     record.commit()
     db.session.commit()
     return record
+
+
+@pytest.fixture()
+def draft_record(app, db, prepare_es, s3_location):
+    # let's create a record
+    draft_uuid = uuid.uuid4()
+    data = {
+        'title': 'blah',
+        # '$schema': TestRecord.PREFERRED_SCHEMA,
+        'id': '1'
+    }
+    PersistentIdentifier.create(
+        pid_type='drecid', pid_value='1', status=PIDStatus.REGISTERED,
+        object_type='rec', object_uuid=draft_uuid
+    )
+    rec = Record.create(data, id_=draft_uuid)
+    return rec
