@@ -24,7 +24,7 @@ def test_multipart_uploader(app, record):
 
     _resolver = lambda name, **kwargs: url_for(
         'oarepo_records_draft.' + name.format(endpoint='drecid'),
-        pid_value=1, **kwargs, _external=True)
+        pid_value=1, key='test', **kwargs, _external=True)
 
     res = multipart_uploader(record=record, key='test', files=files,
                              pid=None, endpoint=None, request=None, resolver=_resolver)
@@ -37,8 +37,8 @@ def test_multipart_uploader(app, record):
     response = res()
     assert response['testparam'] == 'test'
     assert response.get('multipart_upload', None) is not None
-    assert response['multipart_upload']['complete_url'] == _resolver('{0}_upload_complete')
-    assert response['multipart_upload']['abort_url'] == _resolver('{0}_upload_abort')
+    assert response['multipart_upload']['complete_url'] == _resolver('{endpoint}_upload_complete')
+    assert response['multipart_upload']['abort_url'] == _resolver('{endpoint}_upload_abort')
 
     multi = response['multipart_upload']
     assert isinstance(response, dict)

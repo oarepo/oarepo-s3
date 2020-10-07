@@ -68,6 +68,12 @@ setup(
         'invenio_base.apps': [
             'oarepo_s3 = oarepo_s3:OARepoS3',
         ],
+        'oarepo_records_draft.uploaders': [
+            'oarepo_s3 = oarepo_s3.api:multipart_uploader'
+        ],
+        'oarepo_records_draft.extra_actions': [
+            'oarepo_s3 = oarepo_s3.views:multipart_actions'
+        ]
     },
     extras_require=extras_require,
     install_requires=install_requires,
