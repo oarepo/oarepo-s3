@@ -102,7 +102,7 @@ def multipart_actions(code, files, rest_endpoint, extra, is_draft):
         'files/<key>/complete-multipart': MultipartUploadCompleteResource.as_view(
             MultipartUploadCompleteResource.view_name.format(endpoint=code)
         ),
-        'files/<key>/abort-multipart': MultipartUploadCompleteResource.as_view(
+        'files/<key>/abort-multipart': MultipartUploadAbortResource.as_view(
             MultipartUploadCompleteResource.view_name.format(endpoint=code)
         )
     }
