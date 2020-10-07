@@ -57,7 +57,7 @@ multipart_complete_args = {
 
 class MultipartUploadCompleteResource(MethodView):
     """Complete multipart upload method view."""
-    view_name = '{0}_upload_complete'
+    view_name = '{endpoint}_upload_complete'
 
     @pass_record
     @use_kwargs('multipart_complete_parts')
@@ -78,7 +78,7 @@ class MultipartUploadCompleteResource(MethodView):
 
 class MultipartUploadAbortResource(MethodView):
     """Cancel a multipart upload method view."""
-    view_name = '{0}_upload_abort'
+    view_name = '{endpoint}_upload_abort'
 
     @pass_record
     def post(self, pid, record, key):
@@ -93,3 +93,16 @@ class MultipartUploadAbortResource(MethodView):
             upload['upload_id'])
 
         return jsonify(res.dumps())
+
+
+def multipart_actions(code, files, rest_endpoint, extra, is_draft):
+    # decide if view should be created on this resource and return blueprint mapping
+    # rest path -> view
+    return {
+        'files/<key>/complete-multipart': MultipartUploadCompleteResource.as_view(
+            MultipartUploadCompleteResource.view_name.format(endpoint=code)
+        ),
+        'files/<key>/abort-multipart': MultipartUploadCompleteResource.as_view(
+            MultipartUploadCompleteResource.view_name.format(endpoint=code)
+        )
+    }

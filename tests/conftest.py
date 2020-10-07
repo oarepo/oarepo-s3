@@ -185,7 +185,7 @@ def db(app):
 def client(app):
     """Get test client."""
     with app.test_client() as client:
-        # print(app.url_map)
+        print(app.url_map)
         yield client
 
 
@@ -274,9 +274,7 @@ def prepare_es(app, db):
 
 
 @pytest.fixture()
-@patch('pkg_resources.iter_entry_points', draft_entrypoints)
 def draft_app(app):
-    RecordsDraft(app)
     return app
 
 
@@ -393,7 +391,7 @@ def generic_file(db, app, record):
     return stream
 
 
-@pytest.fixture()
+@pytest.fixture(scope='function')
 def record(app, db, s3_location):
     """Create a record."""
     record = {

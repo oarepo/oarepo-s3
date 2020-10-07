@@ -14,21 +14,9 @@ readme = open('README.rst').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
-    'check-manifest>=0.25',
-    'coverage>=5.0',
-    'invenio-base>=1.2.2',
-    'invenio-app>=1.2.3',
-    'invenio-db[all]>=1.0.4',
-    'isort>=4.3.3',
-    'moto>=1.3.7',
-    'pydocstyle>=1.0.0',
-    'pytest-cache>=1.0',
-    'pytest-cov>=1.8.0',
-    'pytest-invenio>=1.3.0',
-    'pytest-pep8>=1.0.6',
-    'pytest>=4.6.4,<5.0.0',
-    'redis>=2.10.5',
-    'oarepo-records-draft>=5.0.0a18'
+    'oarepo[tests]>=3.3.0',
+    'oarepo-records-draft>=5.0.0a18',
+    'moto>=1.3.7'
 ]
 
 extras_require = {

@@ -13,9 +13,12 @@ def draft_entrypoints(app, group=None, name=None):
     d = pkg_resources.Distribution()
     s3_uploader = pkg_resources.EntryPoint.parse(
         'oarepo_s3 = oarepo_s3.api:multipart_uploader', dist=d)
+    s3_actions = pkg_resources.EntryPoint.parse(
+        'oarepo_s3 = oarepo_s3.views:multipart_actions', dist=d)
 
     data = {
-        'oarepo_records_draft.uploaders': [s3_uploader]
+        'oarepo_records_draft.uploaders': [s3_uploader],
+        'oarepo_records_draft.extra_actions': [s3_actions]
     }
 
     names = data.keys() if name is None else [name]

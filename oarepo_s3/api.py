@@ -85,7 +85,7 @@ class MultipartUpload(object):
 
 
 @use_kwargs(multipart_init_args)
-def multipart_uploader(record, key, files, pid, request, resolver, size=None, part_size=None):
+def multipart_uploader(record, key, files, pid, request, endpoint, resolver, size=None, part_size=None, **kwargs):
     """Multipart upload handler."""
     from oarepo_s3.views import MultipartUploadCompleteResource, MultipartUploadAbortResource
 

@@ -12,16 +12,17 @@ from tests.utils import draft_entrypoints
 
 
 @patch('pkg_resources.iter_entry_points', draft_entrypoints)
-def test_draft_integration(draft_app, draft_record, client):
+def test_draft_integration(app, draft_record, client):
     """Test integration with invenio records draft library."""
     fsize = 1024 * 1024 * 200
 
     resp = client.post(
-        '/draft/records/1/files',
+        '/draft/records/1/files?multipart=True',
         content_type='application/x-www-form-urlencoded',
         data={
             'key': 'test.txt',
+            'multipart_content_type': 'text/plain',
             'size': fsize
         })
     assert resp.status_code == 400
-    assert resp is None
+    assert resp.json is None
