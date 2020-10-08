@@ -90,8 +90,8 @@ def multipart_uploader(record, key, files, pid, request, endpoint, resolver, siz
     from oarepo_s3.views import MultipartUploadCompleteResource, MultipartUploadAbortResource
 
     expiration = current_app.config['S3_MULTIPART_UPLOAD_EXPIRATION']
-    complete = resolver(MultipartUploadCompleteResource.view_name)
-    abort = resolver(MultipartUploadAbortResource.view_name)
+    complete = resolver(MultipartUploadCompleteResource.view_name, key=key)
+    abort = resolver(MultipartUploadAbortResource.view_name, key=key)
 
     mu = MultipartUpload(key=key,
                          expires=expiration,

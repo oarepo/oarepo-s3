@@ -15,7 +15,6 @@ import uuid
 from io import BytesIO
 
 import boto3
-import pkg_resources
 import pytest
 from flask import current_app, Flask, url_for
 from flask.testing import FlaskClient
@@ -50,8 +49,8 @@ from oarepo_s3.ext import OARepoS3
 from oarepo_s3.s3 import S3Client
 from tests.utils import draft_entrypoints
 
-SAMPLE_ALLOWED_SCHEMAS = ['http://localhost:5000/sample/sample-v1.0.0.json']
-SAMPLE_PREFERRED_SCHEMA = 'http://localhost:5000/sample/sample-v1.0.0.json'
+SAMPLE_ALLOWED_SCHEMAS = ['http://localhost:5000/schemas/records/record-v1.0.0.json']
+SAMPLE_PREFERRED_SCHEMA = 'http://localhost:5000/schemas/records/record-v1.0.0.json'
 
 
 class TestSchemaV1(Schema):
@@ -80,7 +79,7 @@ class MockedS3Client(S3Client):
         return {"parts_url": [f'http://localhost/test/{i}' for i in range(1, max_parts + 1)],
                 "chunk_size": chunk_size,
                 "checksum_update": "",
-                "upload_id": uuid.uuid4(),
+                "upload_id": str(uuid.uuid4()),
                 "origin": "",
                 "num_chunks": max_parts,
                 "finish_url": ""
@@ -126,7 +125,7 @@ def base_app(app_config):
         SECURITY_PASSWORD_SALT='TEST_SECURITY_PASSWORD_SALT',
         SECRET_KEY='TEST_SECRET_KEY',
         INVENIO_INSTANCE_PATH=instance_path,
-        SEARCH_INDEX_PREFIX='test-',
+        # SEARCH_INDEX_PREFIX='records-',
         RECORDS_REST_ENDPOINTS={},
         FILES_REST_DEFAULT_STORAGE_CLASS='S',
         JSONSCHEMAS_HOST='localhost:5000',
@@ -218,7 +217,6 @@ def app_config(app_config):
             'list_route': '/records/',
             'item_route': '/records/<pid(recid, '
                           'record_class="invenio_records_files.api.Record"):pid_value>',
-            'indexer_class': None
         },
         'drecid': {
             'create_permission_factory_imp': allow_all,
