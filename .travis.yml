@@ -23,7 +23,6 @@ cache:
 
 env:
   matrix:
-    - REQUIREMENTS=lowest
     - REQUIREMENTS=release DEPLOY=true
     - REQUIREMENTS=devel
 
