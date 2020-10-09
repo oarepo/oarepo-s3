@@ -94,11 +94,11 @@ class MockedS3Client(S3Client):
 
     def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
         """Faked complete of a multipart upload to AWS S3."""
-        return {}
+        return {'status': 'completed'}
 
     def abort_multipart_upload(self, bucket, object_name, upload_id):
         """Faked cancel of an in-progress multipart upload to AWS S3."""
-        return {}
+        return {'status': 'aborted'}
 
 
 class JsonClient(FlaskClient):

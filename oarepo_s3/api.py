@@ -39,10 +39,11 @@ more detailed description in :any:`configuration`.
   Javascript library.
 
 """
+from enum import Enum
+
 from flask import current_app
 from webargs import fields
 from webargs.flaskparser import use_kwargs
-
 
 multipart_init_args = {
     'size': fields.Int(
@@ -56,6 +57,12 @@ multipart_init_args = {
         data_key='partSize',
     ),
 }
+
+
+class MultipartUploadStatus(object):
+    IN_PROGRESS = 'in_progress'
+    ABORTED = 'aborted'
+    COMPLETED = 'complete'
 
 
 def multipart_init_response_factory(file_obj):
@@ -82,6 +89,7 @@ class MultipartUpload(object):
         self.session = {}
         self.complete_url = complete_url
         self.abort_url = abort_url
+        self.status = MultipartUploadStatus.IN_PROGRESS
 
 
 @use_kwargs(multipart_init_args)
@@ -104,7 +112,8 @@ def multipart_uploader(record, key, files, pid, request, endpoint, resolver, siz
     files[key]['multipart_upload'] = dict(
         **mu.session,
         complete_url=mu.complete_url,
-        abort_url=mu.abort_url
+        abort_url=mu.abort_url,
+        status=mu.status
     )
 
     return multipart_init_response_factory(files[key])

@@ -45,7 +45,7 @@ from invenio_records_rest.views import pass_record
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
-from oarepo_s3.api import MultipartUpload
+from oarepo_s3.api import MultipartUpload, MultipartUploadStatus
 from oarepo_s3.proxies import current_s3
 
 multipart_complete_args = {
@@ -60,20 +60,28 @@ class MultipartUploadCompleteResource(MethodView):
     view_name = '{endpoint}_upload_complete'
 
     @pass_record
-    @use_kwargs('multipart_complete_parts')
+    @use_kwargs(multipart_complete_args)
     def post(self, pid, record, key, parts):
-        file_rec = record.files[key]
-        if not isinstance(file_rec, MultipartUpload):
-            abort(400, 'resource is not a multipart upload')
+        files = record.files
+        file_rec = files[key]
+        mup = file_rec.get('multipart_upload')
 
-        upload = file_rec.session
+        if not mup:
+            abort(400, 'resource is not a multipart upload')
+        if mup['status'] != MultipartUploadStatus.IN_PROGRESS:
+            abort(400, 'multipart upload cannot be completed')
+
         res = current_s3.client.complete_multipart_upload(
-            upload['bucket'],
+            mup['bucket'],
             file_rec.key,
             parts,
-            upload['upload_id'])
+            mup['upload_id'])
 
-        return jsonify(res.dumps())
+        file_rec['multipart_upload']['status'] = MultipartUploadStatus.COMPLETED
+        files.flush()
+        record.commit()
+
+        return jsonify(res)
 
 
 class MultipartUploadAbortResource(MethodView):
@@ -82,17 +90,25 @@ class MultipartUploadAbortResource(MethodView):
 
     @pass_record
     def post(self, pid, record, key):
-        file_rec = record.files[key]
-        if not isinstance(file_rec, MultipartUpload):
+        files = record.files
+        file_rec = files[key]
+        mup = file_rec.get('multipart_upload')
+
+        if not mup:
             abort(400, 'resource is not a multipart upload')
+        if mup['status'] != MultipartUploadStatus.IN_PROGRESS:
+            abort(400, 'cannot abort, upload not in progress')
 
-        upload = file_rec.session
         res = current_s3.client.abort_multipart_upload(
-            upload['bucket'],
+            mup['bucket'],
             file_rec.key,
-            upload['upload_id'])
+            mup['upload_id'])
 
-        return jsonify(res.dumps())
+        file_rec['multipart_upload']['status'] = MultipartUploadStatus.ABORTED
+        files.flush()
+        record.commit()
+
+        return jsonify(res)
 
 
 def multipart_actions(code, files, rest_endpoint, extra, is_draft):

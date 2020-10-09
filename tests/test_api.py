@@ -13,7 +13,7 @@ from uuid import UUID
 from flask import request, url_for
 from werkzeug.datastructures import ImmutableMultiDict
 
-from oarepo_s3.api import multipart_uploader
+from oarepo_s3.api import multipart_uploader, MultipartUploadStatus
 
 
 def test_multipart_uploader(app, record):
@@ -46,6 +46,7 @@ def test_multipart_uploader(app, record):
     assert multi['num_chunks'] == 33
     assert multi['chunk_size'] == 16777216
     assert len(multi['parts_url']) == 33
+    assert multi['status'] == MultipartUploadStatus.IN_PROGRESS
     assert isinstance(multi['upload_id'], str)
 
     assert file_rec.get('multipart_upload', None) is not None
