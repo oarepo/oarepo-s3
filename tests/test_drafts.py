@@ -24,5 +24,5 @@ def test_draft_integration(app, draft_record, client):
             'multipart_content_type': 'text/plain',
             'size': fsize
         })
-    assert resp.status_code == 400
-    assert resp.json is None
+    assert resp.status_code == 201
+    assert 'multipart_upload' in resp.json

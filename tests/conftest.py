@@ -24,6 +24,7 @@ from invenio_db import InvenioDB, db as _db
 from invenio_files_rest import InvenioFilesREST
 from invenio_files_rest.models import Bucket, Location
 from invenio_indexer import InvenioIndexer
+from invenio_indexer.api import RecordIndexer
 from invenio_jsonschemas import InvenioJSONSchemas
 from invenio_pidstore import InvenioPIDStore
 from invenio_pidstore.models import PersistentIdentifier, PIDStatus
@@ -69,6 +70,12 @@ class TestRecord(SchemaKeepingRecordMixin,
     PREFERRED_SCHEMA = SAMPLE_PREFERRED_SCHEMA
     MARSHMALLOW_SCHEMA = TestSchemaV1
 
+
+class TestIndexer(RecordIndexer):
+    """Fake record indexer."""
+    def index(self, record, arguments=None, **kwargs):
+        """Fake index implementation."""
+        return {}
 
 class MockedS3Client(S3Client):
     """Fake S3 client."""
@@ -127,6 +134,7 @@ def base_app(app_config):
         INVENIO_INSTANCE_PATH=instance_path,
         # SEARCH_INDEX_PREFIX='records-',
         RECORDS_REST_ENDPOINTS={},
+        SEARCH_INDEX_PREFIX='test-',
         FILES_REST_DEFAULT_STORAGE_CLASS='S',
         JSONSCHEMAS_HOST='localhost:5000',
         SEARCH_ELASTIC_HOSTS=os.environ.get('SEARCH_ELASTIC_HOSTS', None)
@@ -214,6 +222,7 @@ def app_config(app_config):
             },
             'search_type': None,
             'search_index': None,
+            'indexer_class': TestIndexer,
             'list_route': '/records/',
             'item_route': '/records/<pid(recid, '
                           'record_class="invenio_records_files.api.Record"):pid_value>',
