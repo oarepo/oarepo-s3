@@ -43,6 +43,4 @@ more detailed description in :any:`configuration`.
 from flask import current_app
 from werkzeug.local import LocalProxy
 
-from oarepo_s3.ext import OARepoS3State
-
-current_s3: OARepoS3State = LocalProxy(lambda: current_app.extensions['oarepo-s3'])
+current_s3 = LocalProxy(lambda: current_app.extensions['oarepo-s3'])

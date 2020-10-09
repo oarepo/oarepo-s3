@@ -77,7 +77,8 @@ class MultipartUploadCompleteResource(MethodView):
             parts,
             mup['upload_id'])
 
-        file_rec['multipart_upload']['status'] = MultipartUploadStatus.COMPLETED
+        file_rec['multipart_upload']['status'] = \
+            MultipartUploadStatus.COMPLETED
         files.flush()
         record.commit()
 
@@ -112,13 +113,16 @@ class MultipartUploadAbortResource(MethodView):
 
 
 def multipart_actions(code, files, rest_endpoint, extra, is_draft):
-    # decide if view should be created on this resource and return blueprint mapping
+    # decide if view should be created on this
+    # resource and return blueprint mapping
     # rest path -> view
     return {
-        'files/<key>/complete-multipart': MultipartUploadCompleteResource.as_view(
-            MultipartUploadCompleteResource.view_name.format(endpoint=code)
-        ),
-        'files/<key>/abort-multipart': MultipartUploadAbortResource.as_view(
-            MultipartUploadAbortResource.view_name.format(endpoint=code)
-        )
+        'files/<key>/complete-multipart':
+            MultipartUploadCompleteResource.as_view(
+                MultipartUploadCompleteResource.view_name.format(endpoint=code)
+            ),
+        'files/<key>/abort-multipart':
+            MultipartUploadAbortResource.as_view(
+                MultipartUploadAbortResource.view_name.format(endpoint=code)
+            )
     }

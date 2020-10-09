@@ -33,7 +33,8 @@ def test_draft_integration(app, draft_record, client):
     abort_url = resp.json['multipart_upload']['abort_url']
 
     assert complete_url and abort_url
-    assert resp.json['multipart_upload']['status'] == MultipartUploadStatus.IN_PROGRESS
+    assert resp.json['multipart_upload']['status'] == \
+        MultipartUploadStatus.IN_PROGRESS
 
     # Test in-progress upload can be aborted once
     resp = client.post(abort_url)

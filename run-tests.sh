@@ -7,7 +7,6 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 pydocstyle invenio_s3 tests docs && \
-isort -rc -c -df && \
+isort -c -df oarepo_s3 && \
 check-manifest --ignore ".travis-*" && \
-sphinx-build -qnNW docs docs/_build/html && \
 python setup.py test
