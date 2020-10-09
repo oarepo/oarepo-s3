@@ -16,11 +16,12 @@ from io import BytesIO
 
 import boto3
 import pytest
-from flask import current_app, Flask, url_for
+from flask import Flask, current_app, url_for
 from flask.testing import FlaskClient
 from invenio_app.factory import create_api
 from invenio_base.signals import app_loaded
-from invenio_db import InvenioDB, db as _db
+from invenio_db import InvenioDB
+from invenio_db import db as _db
 from invenio_files_rest import InvenioFilesREST
 from invenio_files_rest.models import Bucket, Location
 from invenio_indexer import InvenioIndexer
@@ -34,31 +35,37 @@ from invenio_records_rest import InvenioRecordsREST
 from invenio_records_rest.utils import PIDConverter, allow_all
 from invenio_records_rest.views import create_blueprint_from_app
 from invenio_rest import InvenioREST
-from invenio_s3 import InvenioS3
 from invenio_search import InvenioSearch
 from invenio_search.cli import destroy, init
-from marshmallow import Schema, fields, INCLUDE
+from marshmallow import INCLUDE, Schema, fields
 from mock import patch
 from moto import mock_s3
 from oarepo_records_draft.ext import RecordsDraft
-from oarepo_validate import SchemaKeepingRecordMixin, MarshmallowValidatedRecordMixin
+from oarepo_validate import MarshmallowValidatedRecordMixin, \
+    SchemaKeepingRecordMixin
 from s3_client_lib.utils import get_file_chunk_size
-from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy_utils import create_database, database_exists
 
+from invenio_s3 import InvenioS3
 from oarepo_s3 import S3FileStorage
 from oarepo_s3.ext import OARepoS3
 from oarepo_s3.s3 import S3Client
 from tests.utils import draft_entrypoints
 
-SAMPLE_ALLOWED_SCHEMAS = ['http://localhost:5000/schemas/records/record-v1.0.0.json']
-SAMPLE_PREFERRED_SCHEMA = 'http://localhost:5000/schemas/records/record-v1.0.0.json'
+SAMPLE_ALLOWED_SCHEMAS = [
+    'http://localhost:5000/schemas/records/record-v1.0.0.json']
+SAMPLE_PREFERRED_SCHEMA = \
+    'http://localhost:5000/schemas/records/record-v1.0.0.json'
 
 
 class TestSchemaV1(Schema):
     """Testing record schema."""
+
     title = fields.String()
 
     class Meta:
+        """Test schema Meta class."""
+
         unknown = INCLUDE
 
 
@@ -66,6 +73,7 @@ class TestRecord(SchemaKeepingRecordMixin,
                  MarshmallowValidatedRecordMixin,
                  Record):
     """Fake test record."""
+
     ALLOWED_SCHEMAS = SAMPLE_ALLOWED_SCHEMAS
     PREFERRED_SCHEMA = SAMPLE_PREFERRED_SCHEMA
     MARSHMALLOW_SCHEMA = TestSchemaV1
@@ -73,9 +81,11 @@ class TestRecord(SchemaKeepingRecordMixin,
 
 class TestIndexer(RecordIndexer):
     """Fake record indexer."""
+
     def index(self, record, arguments=None, **kwargs):
         """Fake index implementation."""
         return {}
+
 
 class MockedS3Client(S3Client):
     """Fake S3 client."""
@@ -83,7 +93,8 @@ class MockedS3Client(S3Client):
     def init_multipart_upload(self, bucket, object_name, object_size):
         """Fake init multipart upload implementation."""
         max_parts, chunk_size = get_file_chunk_size(object_size)
-        return {"parts_url": [f'http://localhost/test/{i}' for i in range(1, max_parts + 1)],
+        parts = [f'http://localhost/test/{i}' for i in range(1, max_parts + 1)]
+        return {"parts_url": parts,
                 "chunk_size": chunk_size,
                 "checksum_update": "",
                 "upload_id": str(uuid.uuid4()),
@@ -102,7 +113,10 @@ class MockedS3Client(S3Client):
 
 
 class JsonClient(FlaskClient):
+    """Test REST JSON client."""
+
     def open(self, *args, **kwargs):
+        """Opens a new connection."""
         kwargs.setdefault('content_type', 'application/json')
         kwargs.setdefault('Accept', 'application/json')
         return super().open(*args, **kwargs)
@@ -177,7 +191,7 @@ def db(app):
     """Create database for the tests."""
     with app.app_context():
         if not database_exists(str(_db.engine.url)) and \
-            app.config['SQLALCHEMY_DATABASE_URI'] != 'sqlite://':
+           app.config['SQLALCHEMY_DATABASE_URI'] != 'sqlite://':
             create_database(_db.engine.url)
         _db.create_all()
 
@@ -225,7 +239,8 @@ def app_config(app_config):
             'indexer_class': TestIndexer,
             'list_route': '/records/',
             'item_route': '/records/<pid(recid, '
-                          'record_class="invenio_records_files.api.Record"):pid_value>',
+                          'record_class="invenio_records_files.api.Record"'
+                          '):pid_value>',
         },
         'drecid': {
             'create_permission_factory_imp': allow_all,
@@ -253,7 +268,9 @@ def app_config(app_config):
 
 @pytest.fixture(scope='module')
 def draft_config(app_config):
-    app_config['RECORDS_DRAFT_ENDPOINTS'] = app_config['RECORDS_REST_ENDPOINTS']
+    """Draft endpoints configuration."""
+    app_config['RECORDS_DRAFT_ENDPOINTS'] = \
+        app_config['RECORDS_REST_ENDPOINTS']
     app_config['RECORDS_DRAFT_ENDPOINTS'].update(
         dict(
             recid=dict(
@@ -269,19 +286,13 @@ def draft_config(app_config):
 
 @pytest.fixture()
 def prepare_es(app, db):
-    runner = app.test_cli_runner()
-    result = runner.invoke(destroy, ['--yes-i-know', '--force'])
-    if result.exit_code:
-        print(result.output, file=sys.stderr)
-    assert result.exit_code == 0
-    result = runner.invoke(init)
-    if result.exit_code:
-        print(result.output, file=sys.stderr)
-    assert result.exit_code == 0
+    """Prepare ES indices."""
+    return
 
 
 @pytest.fixture()
 def draft_app(app):
+    """Drafts app fixture."""
     return app
 
 
@@ -335,6 +346,7 @@ def file_instance_mock(s3_testpath):
 
 @pytest.fixture
 def draft_records_url(app):
+    """Draft endpoint url."""
     return url_for('oarepo_records_rest.draft_records_list')
 
 
@@ -376,7 +388,8 @@ def objects():
     objs = []
     for key, content in [
         ('LICENSE', b'license file'),
-        ('README.rst', b'readme file')]:
+        ('README.rst', b'readme file')
+    ]:
         objs.append(
             (key, BytesIO(content), len(content))
         )
@@ -412,7 +425,7 @@ def record(app, db, s3_location):
 
 @pytest.fixture()
 def draft_record(app, db, prepare_es, s3_location):
-    # let's create a record
+    """Testing draft-enabled record."""
     draft_uuid = uuid.uuid4()
     data = {
         'title': 'blah',

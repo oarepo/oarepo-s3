@@ -23,7 +23,8 @@ def test_multipart_save(app, draft_record, s3storage, prepare_es):
 
     assert file.get('checksum') is None
     assert file.get('size') == fsize
-    assert all([key in mu.session.keys() for key in ['parts_url', 'chunk_size', 'upload_id', 'num_chunks', 'bucket']])
+    assert all([key in mu.session.keys() for key in [
+        'parts_url', 'chunk_size', 'upload_id', 'num_chunks', 'bucket']])
     assert len(mu.session['parts_url']) == int(mu.session['num_chunks'])
 
 
@@ -33,9 +34,9 @@ def test_save(app, record, s3storage, prepare_es, generic_file):
     mu = MultipartUpload('test', 3600, fsize)
 
     res = s3storage.save(generic_file)
-    assert res == ('s3://test_invenio_s3/path/to/data', 12, 'md5:f28427f7665f43a5d902733b655166f3')
+    assert res == (
+        's3://test_invenio_s3/path/to/data',
+        12, 'md5:f28427f7665f43a5d902733b655166f3')
 
     res = s3storage.save(mu)
     assert res == ('s3://test_invenio_s3/path/to/data', fsize, None)
-
-

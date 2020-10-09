@@ -51,10 +51,13 @@ class S3Client(object):
         self.endpoint_url = client_kwargs.get('endpoint_url', None)
         self.client_kwargs = client_kwargs
         self.config_kwargs = config_kwargs
-        self.client = S3MultipartClient(self.endpoint_url, access_key, secret_key)
+        self.client = S3MultipartClient(
+            self.endpoint_url, access_key, secret_key)
 
     def init_multipart_upload(self, bucket, object_name, object_size):
-        """Creates a multipart upload to AWS S3 API and returns session configuration with pre-signed urls."""
+        """Creates a multipart upload to AWS S3 API and returns
+           session configuration with pre-signed urls.
+        """
         return self.client.signed_s3_multipart_upload(bucket=bucket,
                                                       object_name=object_name,
                                                       size=object_size,
@@ -64,9 +67,12 @@ class S3Client(object):
 
     def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
         """Completes a multipart upload to AWS S3."""
-        self.client.finish_multipart_upload(bucket, object_name, parts, upload_id)
-        return self.client.finish_file_metadata(bucket, object_name, object_name)
+        self.client.finish_multipart_upload(
+            bucket, object_name, parts, upload_id)
+        return self.client.finish_file_metadata(
+            bucket, object_name, object_name)
 
     def abort_multipart_upload(self, bucket, object_name, upload_id):
         """Cancels an in-progress multipart upload to AWS S3."""
-        return self.client.abort_multipart_upload(bucket, object_name, upload_id)
+        return self.client.abort_multipart_upload(
+            bucket, object_name, upload_id)

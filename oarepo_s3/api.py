@@ -93,9 +93,11 @@ class MultipartUpload(object):
 
 
 @use_kwargs(multipart_init_args)
-def multipart_uploader(record, key, files, pid, request, endpoint, resolver, size=None, part_size=None, **kwargs):
+def multipart_uploader(record, key, files, pid, request, endpoint,
+                       resolver, size=None, part_size=None, **kwargs):
     """Multipart upload handler."""
-    from oarepo_s3.views import MultipartUploadCompleteResource, MultipartUploadAbortResource
+    from oarepo_s3.views import MultipartUploadAbortResource, \
+        MultipartUploadCompleteResource
 
     expiration = current_app.config['S3_MULTIPART_UPLOAD_EXPIRATION']
     complete = resolver(MultipartUploadCompleteResource.view_name, key=key)

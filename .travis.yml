@@ -22,20 +22,14 @@ cache:
   - pip
 
 env:
-  global:
-    - BOTO_CONFIG=/dev/null
   matrix:
-    - REQUIREMENTS=lowest
     - REQUIREMENTS=release DEPLOY=true
     - REQUIREMENTS=devel
 
 python:
-  - "3.6"
-  - "3.7"
   - "3.8"
 
 before_install:
-  - "nvm install 6; nvm use 6"
   - "travis_retry pip install --upgrade pip setuptools py"
   - "travis_retry pip install twine wheel coveralls requirements-builder"
   - "requirements-builder -e all --level=min setup.py > .travis-lowest-requirements.txt"
@@ -44,6 +38,7 @@ before_install:
 
 install:
   - "travis_retry pip install -r .travis-${REQUIREMENTS}-requirements.txt"
+  - "travis_retry pip install 3rdparty/s3-client"
   - "travis_retry pip install -e .[all]"
   - "pip freeze"
 
@@ -55,12 +50,15 @@ after_success:
 
 deploy:
   provider: pypi
-  user: oarepo
+  user: "__token__"
   password:
-    secure: "enp0kMohUFWXHsDRvFjNGUxDRPg0LZGR99IHnQE+KP5rt3HRBfRRQWbcqBxBI/61019PPEPbMxIZwNMIYBrEVPHKYTwTT6RNcGH8nMjosxU7zzHweUrugTJjQFnincuU6PEDjkj9mN76OGPnmFAaDWCBd3aIZ4vt1nN5klJfSCsU0tqnKLRy2M/MegMs2j27gFUaU+eINul8wDePBACyLwftli2y3jaA8t+McNON33J4w3/HG504AzVvYh7M7rfR13tpMih5BhdHsC9ww0pNMqgDImgWq1JEdKqBu6OODEjGu+9t5u5pgnbMJco13Pi1Vhm3/1WBieItKQhQTPhu3r1Em4nknKymGJBHUiaz7218DAPah8gVGX0I5q2OmDNP7HVw9kmLv7a2wFj2jN6rnB0BRRwkLapu0J9ASCzfn2JgNElazTe46ykEoPUUpW8t1GXTN+sGC6+ldNop42JBdtCmrmC6cwVXFIP3jRIf+PYfFTSkz96shE6iOnt4+NCcxnahQ2uIoYF17v24M0b2+TWMIOvcAAieUm9jenLeh8juV9U+mcleHxzNor71p+8czn1/ppJEZdorzcvDVE9uDe6noNmYDlrjyhQ3ci0fmR2jQylUvZ3vI0hPgLL7+KDL45nhoPCbs8dFk8UDbj34j/YV4YYTbaIf55F1tYIZAik"
+    secure: "AZDDkNIYFnHTINqmPPuRDC+X7Hwi92iMBi2DvqsAc2GJ375th+bC70cjJbhysnBwCgMvJGMYtuAxtSrPWLEMIC3kRd7y0X9ZGvRlGlG0M4YhegTfGl9pshwgQL/Jbqz6Ct8O5wAcXloqnUqfCUpWqVtoDiPUnfgW+Nv3rZfpbUJK4/i5S8GVSsk9TCxJECgGvg09RicsgR0pN+sBLLrEYgC1WnNnDB8396oNaGD92BCTLlrwYd9H8TJWe19VsTeVxY9keAkmqXdhv/5y2sypWmXSl1NDvkZUTmCanC+vTnPGsrziAq9OyFr068q3FT5ETdTk6nhWtSElwo0kUWwIAvQ6SbqgI2QOntGvBIf5nbHTsAhPxUU3vr6N7sJmLtKoeLnrQqWFypCoLOsIVCnu6aPNFd/FU+LQdAIFolsQ/RjMZrMn71/K2hKMDVHjiyhxySgXZWOwIc3AplrX1I3a5+PgNwvXueNtXUdDywmgP6DrYSzqEpNbZ9Jj9a172LaMb2uqru1Lc62PCix9omZxM4Zf3eThQUFLftHrtb5mLERtFrt6LSM+hhdNGeNmATasd6RiHiLJZOTmXikNWs9WI79/TmK5bFl3u/HzDsE5XDnPyHcSe9ePEcttrEzORebodOqoqr6MtWevDPYDTmd4aiNdLYlr5ud9V0y+wG+Jh+0="
   distributions: "sdist bdist_wheel"
   on:
     tags: true
-    python: "3.6"
+    branch: "master"
+    python: "3.8"
     repo: oarepo/oarepo-s3
     condition: $DEPLOY = true
+  distributions: "sdist bdist_wheel"
+  skip_existing: true

@@ -21,3 +21,13 @@ recursive-include docs Makefile
 recursive-include examples *.py
 recursive-include examples *.sh
 recursive-include tests *.py
+recursive-include 3rdparty *.py
+recursive-include 3rdparty *.md
+recursive-exclude 3rdparty .gitkeep
+recursive-exclude 3rdparty *.yaml
+recursive-include 3rdparty *.toml
+recursive-include 3rdparty *.txt
+include .gitmodules
+include docker-compose.yml
+include docker-services.yml
+exclude .envrc

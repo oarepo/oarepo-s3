@@ -13,7 +13,7 @@ from uuid import UUID
 from flask import request, url_for
 from werkzeug.datastructures import ImmutableMultiDict
 
-from oarepo_s3.api import multipart_uploader, MultipartUploadStatus
+from oarepo_s3.api import MultipartUploadStatus, multipart_uploader
 
 
 def test_multipart_uploader(app, record):
@@ -22,12 +22,14 @@ def test_multipart_uploader(app, record):
     files = record.files
     request.args = ImmutableMultiDict({'size': fsize})
 
-    _resolver = lambda name, **kwargs: url_for(
-        'oarepo_records_draft.' + name.format(endpoint='drecid'),
-        pid_value=1, **kwargs, _external=True)
+    def _resolver(name, **kwargs):
+        return url_for(
+            'oarepo_records_draft.' + name.format(endpoint='drecid'),
+            pid_value=1, **kwargs, _external=True)
 
     res = multipart_uploader(record=record, key='test', files=files,
-                             pid=None, endpoint=None, request=None, resolver=_resolver)
+                             pid=None, endpoint=None, request=None,
+                             resolver=_resolver)
     assert res is not None
     assert callable(res)
 
@@ -37,8 +39,10 @@ def test_multipart_uploader(app, record):
     response = res()
     assert response['testparam'] == 'test'
     assert response.get('multipart_upload', None) is not None
-    assert response['multipart_upload']['complete_url'] == _resolver('{endpoint}_upload_complete', key='test')
-    assert response['multipart_upload']['abort_url'] == _resolver('{endpoint}_upload_abort', key='test')
+    assert response['multipart_upload']['complete_url'] == \
+        _resolver('{endpoint}_upload_complete', key='test')
+    assert response['multipart_upload']['abort_url'] == \
+        _resolver('{endpoint}_upload_abort', key='test')
 
     multi = response['multipart_upload']
     assert isinstance(response, dict)
