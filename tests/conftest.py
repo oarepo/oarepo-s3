@@ -287,15 +287,7 @@ def draft_config(app_config):
 @pytest.fixture()
 def prepare_es(app, db):
     """Prepare ES indices."""
-    runner = app.test_cli_runner()
-    result = runner.invoke(destroy, ['--yes-i-know', '--force'])
-    if result.exit_code:
-        print(result.output, file=sys.stderr)
-    assert result.exit_code == 0
-    result = runner.invoke(init)
-    if result.exit_code:
-        print(result.output, file=sys.stderr)
-    assert result.exit_code == 0
+    return
 
 
 @pytest.fixture()
