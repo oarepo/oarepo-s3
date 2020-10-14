@@ -44,9 +44,11 @@ from __future__ import absolute_import, print_function
 
 from .storage import S3FileStorage, s3_storage_factory
 from .version import __version__
+from .ext import OARepoS3
 
 __all__ = (
     '__version__',
+    'OARepoS3',
     'S3FileStorage',
     's3_storage_factory',
 )
