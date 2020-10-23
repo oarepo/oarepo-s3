@@ -5,6 +5,8 @@
 # oarepo-s3 is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """Drafts integration tests."""
+import io
+
 from mock import patch
 from oarepo_records_draft import current_drafts
 
@@ -73,3 +75,22 @@ def test_draft_integration(app, draft_record, client):
     )
     assert resp.status_code == 200
     assert resp.json['status'] == 'completed'
+
+    # Test if single-part file upload still works
+    resp = client.put(
+        '/draft/records/1/files/nmp.txt',
+        data=io.BytesIO(b"some random data"),
+        content_type='text/plain')
+    assert resp.status_code == 201
+
+    # Test complete on a non-multipart file fails
+    resp = client.post(
+        '/draft/records/1/files/nmp.txt/complete-multipart',
+        json=dict(
+            parts=[]
+        ))
+    assert resp.status_code == 400
+
+    # Test abort on a non-multipart file fails
+    resp = client.post('/draft/records/1/files/nmp.txt/abort-multipart')
+    assert resp.status_code == 400
