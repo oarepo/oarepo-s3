@@ -43,12 +43,14 @@ more detailed description in :any:`configuration`.
 from __future__ import absolute_import, print_function
 
 from .ext import OARepoS3
+from .s3 import S3Client
 from .storage import S3FileStorage, s3_storage_factory
 from .version import __version__
 
 __all__ = (
     '__version__',
     'OARepoS3',
+    'S3Client',
     'S3FileStorage',
     's3_storage_factory',
 )
