@@ -43,7 +43,7 @@ more detailed description in :any:`configuration`.
 S3_TENANT = None
 """An S3 tenant that owns the InvenioS3 target bucket"""
 
-S3_CLIENT = 'oarepo_s3.s3.S3Client'
+S3_CLIENT = 'oarepo_s3.S3Client'
 """S3 client class to be used for communication with AWS S3 APIs."""
 
 S3_MULTIPART_UPLOAD_EXPIRATION = 3600 * 24
