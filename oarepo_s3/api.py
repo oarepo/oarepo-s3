@@ -103,19 +103,22 @@ def multipart_uploader(record, key, files, pid, request, endpoint,
     complete = resolver(MultipartUploadCompleteResource.view_name, key=key)
     abort = resolver(MultipartUploadAbortResource.view_name, key=key)
 
-    mu = MultipartUpload(key=key,
-                         expires=expiration,
-                         size=size,
-                         part_size=part_size,
-                         complete_url=complete,
-                         abort_url=abort)
+    if request.method == 'POST' and size:
+        mu = MultipartUpload(key=key,
+                             expires=expiration,
+                             size=size,
+                             part_size=part_size,
+                             complete_url=complete,
+                             abort_url=abort)
 
-    files[key] = mu
-    files[key]['multipart_upload'] = dict(
-        **mu.session,
-        complete_url=mu.complete_url,
-        abort_url=mu.abort_url,
-        status=mu.status
-    )
+        files[key] = mu
+        files[key]['multipart_upload'] = dict(
+            **mu.session,
+            complete_url=mu.complete_url,
+            abort_url=mu.abort_url,
+            status=mu.status
+        )
+    else:
+        files[key] = request.stream
 
     return multipart_init_response_factory(files[key])

@@ -60,6 +60,12 @@ class S3FileStorage(S3FSFileStorage):
         """
         mu.session = current_s3.client.init_multipart_upload(
             bucket, mu.key, mu.size)
+
+        # Remove unnecessary things coming from S3 client
+        mu.session.pop('finish_url')
+        mu.session.pop('checksum_update')
+        mu.session.pop('origin')
+
         mu.session['bucket'] = bucket
         return self.fileurl, mu.size, None
 
