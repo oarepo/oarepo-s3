@@ -39,8 +39,6 @@ more detailed description in :any:`configuration`.
   Javascript library.
 
 """
-from enum import Enum
-
 from flask import current_app
 from webargs import fields
 from webargs.flaskparser import use_kwargs
@@ -56,6 +54,7 @@ multipart_init_args = {
         load_from='partSize',
         data_key='partSize',
     ),
+    'multipart': fields.Boolean(default=False, locations=('query',))
 }
 
 
@@ -94,7 +93,8 @@ class MultipartUpload(object):
 
 @use_kwargs(multipart_init_args)
 def multipart_uploader(record, key, files, pid, request, endpoint,
-                       resolver, size=None, part_size=None, **kwargs):
+                       resolver, size=None, part_size=None,
+                       multipart=False, **kwargs):
     """Multipart upload handler."""
     from oarepo_s3.views import MultipartUploadAbortResource, \
         MultipartUploadCompleteResource
@@ -103,19 +103,22 @@ def multipart_uploader(record, key, files, pid, request, endpoint,
     complete = resolver(MultipartUploadCompleteResource.view_name, key=key)
     abort = resolver(MultipartUploadAbortResource.view_name, key=key)
 
-    mu = MultipartUpload(key=key,
-                         expires=expiration,
-                         size=size,
-                         part_size=part_size,
-                         complete_url=complete,
-                         abort_url=abort)
+    if multipart and size:
+        mu = MultipartUpload(key=key,
+                             expires=expiration,
+                             size=size,
+                             part_size=part_size,
+                             complete_url=complete,
+                             abort_url=abort)
 
-    files[key] = mu
-    files[key]['multipart_upload'] = dict(
-        **mu.session,
-        complete_url=mu.complete_url,
-        abort_url=mu.abort_url,
-        status=mu.status
-    )
+        files[key] = mu
+        files[key]['multipart_upload'] = dict(
+            **mu.session,
+            complete_url=mu.complete_url,
+            abort_url=mu.abort_url,
+            status=mu.status
+        )
+    else:
+        files[key] = request.stream
 
     return multipart_init_response_factory(files[key])

@@ -15,7 +15,7 @@ history = open('CHANGES.rst').read()
 
 tests_require = [
     'oarepo[tests]>=3.3.0',
-    'oarepo-records-draft>=5.0.0a18',
+    'oarepo-records-draft>=5.0.0a19',
     'moto>=1.3.7'
 ]
 

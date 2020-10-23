@@ -41,6 +41,8 @@ more detailed description in :any:`configuration`.
 """
 from s3_client_lib.s3_multipart_client import S3MultipartClient
 
+from oarepo_s3.proxies import current_s3
+
 
 class S3Client(object):
     """S3 client for communication with AWS S3 APIs."""
@@ -63,7 +65,8 @@ class S3Client(object):
                                                       size=object_size,
                                                       checksum_update=None,
                                                       origin=None,
-                                                      finish_url=None)
+                                                      finish_url=None,
+                                                      tenant=current_s3.tenant)
 
     def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
         """Completes a multipart upload to AWS S3."""

@@ -19,7 +19,7 @@ def test_draft_integration(app, draft_record, client):
 
     # Test multipart upload can be created
     resp = client.post(
-        '/draft/records/1/files?multipart=True',
+        '/draft/records/1/files/?multipart=True',
         content_type='application/x-www-form-urlencoded',
         data={
             'key': 'test.txt',
@@ -55,7 +55,7 @@ def test_draft_integration(app, draft_record, client):
 
     # Test multipart upload complete endpoint
     resp = client.post(
-        '/draft/records/1/files?multipart=True',
+        '/draft/records/1/files/?multipart=True',
         content_type='application/x-www-form-urlencoded',
         data={
             'key': 'test2.txt',

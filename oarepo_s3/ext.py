@@ -53,6 +53,10 @@ class OARepoS3State(object):
         self.app = app
 
     @property
+    def tenant(self):
+        return self.app.config.get('S3_TENANT', None)
+
+    @property
     def client(self):
         client = obj_or_import_string(self.app.config['S3_CLIENT'])
         s3_info = current_app.extensions['invenio-s3'].init_s3fs_info

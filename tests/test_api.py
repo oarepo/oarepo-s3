@@ -8,19 +8,18 @@
 
 from __future__ import absolute_import, print_function
 
-from uuid import UUID
-
+import flask
 from flask import request, url_for
 from werkzeug.datastructures import ImmutableMultiDict
 
 from oarepo_s3.api import MultipartUploadStatus, multipart_uploader
 
 
-def test_multipart_uploader(app, record):
+def test_multipart_uploader(app, record, client):
     """Test multipart uploader."""
     fsize = 1024 * 1024 * 512
     files = record.files
-    request.args = ImmutableMultiDict({'size': fsize})
+    request.args = ImmutableMultiDict({'size': fsize, 'multipart': True})
 
     def _resolver(name, **kwargs):
         return url_for(
@@ -28,7 +27,7 @@ def test_multipart_uploader(app, record):
             pid_value=1, **kwargs, _external=True)
 
     res = multipart_uploader(record=record, key='test', files=files,
-                             pid=None, endpoint=None, request=None,
+                             pid=None, endpoint=None, request=request,
                              resolver=_resolver)
     assert res is not None
     assert callable(res)
