@@ -60,6 +60,7 @@ class OARepoS3State(object):
     def client(self):
         client = obj_or_import_string(self.app.config['S3_CLIENT'])
         s3_info = current_app.extensions['invenio-s3'].init_s3fs_info
+        s3_info['client_kwargs']['tenant'] = self.tenant
         return client(access_key=s3_info['key'],
                       secret_key=s3_info['secret'],
                       client_kwargs=s3_info['client_kwargs'],

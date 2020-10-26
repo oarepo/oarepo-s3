@@ -53,8 +53,9 @@ class S3Client(object):
         self.endpoint_url = client_kwargs.get('endpoint_url', None)
         self.client_kwargs = client_kwargs
         self.config_kwargs = config_kwargs
+        tenant = client_kwargs.get('tenant', None)
         self.client = S3MultipartClient(
-            self.endpoint_url, access_key, secret_key)
+            self.endpoint_url, access_key, secret_key, tenant)
 
     def init_multipart_upload(self, bucket, object_name, object_size):
         """Creates a multipart upload to AWS S3 API and returns
@@ -65,8 +66,7 @@ class S3Client(object):
                                                       size=object_size,
                                                       checksum_update=None,
                                                       origin=None,
-                                                      finish_url=None,
-                                                      tenant=current_s3.tenant)
+                                                      finish_url=None)
 
     def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
         """Completes a multipart upload to AWS S3."""
