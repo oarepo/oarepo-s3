@@ -48,12 +48,11 @@ class S3Client(object):
     """S3 client for communication with AWS S3 APIs."""
 
     def __init__(self, access_key, secret_key, client_kwargs=dict,
-                 config_kwargs=dict):
+                 config_kwargs=dict, tenant=None):
         """Initialize an S3 client."""
         self.endpoint_url = client_kwargs.get('endpoint_url', None)
         self.client_kwargs = client_kwargs
         self.config_kwargs = config_kwargs
-        tenant = client_kwargs.get('tenant', None)
         self.client = S3MultipartClient(
             self.endpoint_url, access_key, secret_key, tenant)
 
