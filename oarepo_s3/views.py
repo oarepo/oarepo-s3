@@ -41,11 +41,12 @@ more detailed description in :any:`configuration`.
 """
 from flask import abort, jsonify
 from flask.views import MethodView
+from invenio_db import db
 from invenio_records_rest.views import pass_record
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
-from oarepo_s3.api import MultipartUpload, MultipartUploadStatus
+from oarepo_s3.api import MultipartUploadStatus
 from oarepo_s3.proxies import current_s3
 
 multipart_complete_args = {
@@ -73,14 +74,19 @@ class MultipartUploadCompleteResource(MethodView):
 
         res = current_s3.client.complete_multipart_upload(
             mup['bucket'],
-            file_rec.key,
+            mup['key'],
             parts,
             mup['upload_id'])
 
         file_rec['multipart_upload']['status'] = \
             MultipartUploadStatus.COMPLETED
+
+        etag = 'etag:{}'.format(res['ETag'])
+        file_rec.obj.file.checksum = etag
+        file_rec['checksum'] = etag
         files.flush()
         record.commit()
+        db.session.commit()
 
         return jsonify(res)
 
@@ -102,12 +108,13 @@ class MultipartUploadAbortResource(MethodView):
 
         res = current_s3.client.abort_multipart_upload(
             mup['bucket'],
-            file_rec.key,
+            mup['key'],
             mup['upload_id'])
 
         file_rec['multipart_upload']['status'] = MultipartUploadStatus.ABORTED
         files.flush()
         record.commit()
+        db.session.commit()
 
         return jsonify(res)
 

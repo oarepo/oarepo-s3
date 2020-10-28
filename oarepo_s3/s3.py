@@ -69,10 +69,11 @@ class S3Client(object):
 
     def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
         """Completes a multipart upload to AWS S3."""
-        self.client.finish_multipart_upload(
+        res = self.client.finish_multipart_upload(
             bucket, object_name, parts, upload_id)
-        return self.client.finish_file_metadata(
+        self.client.finish_file_metadata(
             bucket, object_name, object_name)
+        return res
 
     def abort_multipart_upload(self, bucket, object_name, upload_id):
         """Cancels an in-progress multipart upload to AWS S3."""

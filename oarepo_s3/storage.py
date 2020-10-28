@@ -45,6 +45,7 @@ class S3FileStorage(S3FSFileStorage):
         """
         if len(args) == 1 and isinstance(args[0], MultipartUpload):
             mu = args[0]
+            mu.key = self.fileurl[len(mu.base_uri):].lstrip('/')
             self._size = mu.size
             return self.multipart_save(mu=mu)
         else:
@@ -66,6 +67,7 @@ class S3FileStorage(S3FSFileStorage):
         mu.session.pop('checksum_update')
         mu.session.pop('origin')
 
+        mu.session['key'] = mu.key
         mu.session['bucket'] = bucket
         return self.fileurl, mu.size, None
 

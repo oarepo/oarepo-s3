@@ -78,13 +78,14 @@ class MultipartUpload(object):
     """Class representing a multipart file upload to S3."""
 
     def __init__(self, key, expires, size,
-                 part_size=None, complete_url=None, abort_url=None):
+                 part_size=None, complete_url=None, abort_url=None, base_uri=None):
         """Initialize a multipart-upload session."""
         self.key = key
         self.expires = expires
         self.uploadId = None
         self.size = size
         self.part_size = part_size
+        self.base_uri = base_uri
         self.session = {}
         self.complete_url = complete_url
         self.abort_url = abort_url
@@ -105,6 +106,7 @@ def multipart_uploader(record, key, files, pid, request, endpoint,
 
     if multipart and size:
         mu = MultipartUpload(key=key,
+                             base_uri=files.bucket.location.uri,
                              expires=expiration,
                              size=size,
                              part_size=part_size,
