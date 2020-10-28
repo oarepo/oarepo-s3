@@ -78,8 +78,9 @@ class MultipartUploadCompleteResource(MethodView):
             parts,
             mup['upload_id'])
 
-        file_rec['multipart_upload']['status'] = \
-            MultipartUploadStatus.COMPLETED
+        file_rec['multipart_upload'] = {
+            'status': MultipartUploadStatus.COMPLETED
+        }
 
         etag = 'etag:{}'.format(res['ETag'])
         file_rec.obj.file.checksum = etag
