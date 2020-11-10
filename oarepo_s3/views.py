@@ -42,6 +42,11 @@ more detailed description in :any:`configuration`.
 from flask import abort, jsonify
 from flask.views import MethodView
 from invenio_db import db
+from invenio_files_rest.models import ObjectVersion
+from invenio_files_rest.proxies import current_permission_factory
+from invenio_files_rest.signals import file_deleted
+from invenio_files_rest.views import check_permission
+from invenio_files_rest.tasks import remove_file_data
 from invenio_records_rest.views import pass_record
 from webargs import fields
 from webargs.flaskparser import use_kwargs
@@ -77,10 +82,7 @@ class MultipartUploadCompleteResource(MethodView):
             mup['key'],
             parts,
             mup['upload_id'])
-
-        file_rec['multipart_upload'] = {
-            'status': MultipartUploadStatus.COMPLETED
-        }
+        file_rec.pop('multipart_upload')
 
         etag = 'etag:{}'.format(res['ETag'])
         file_rec.obj.file.checksum = etag
@@ -90,6 +92,28 @@ class MultipartUploadCompleteResource(MethodView):
         db.session.commit()
 
         return jsonify(res)
+
+
+def delete_file_object(bucket, obj):
+    # Permanently delete specific object version.
+    check_permission(
+        current_permission_factory(bucket, 'object-delete-version'),
+        hidden=False,
+    )
+    obj.remove()
+    # Set newest object as head
+    if obj.is_head:
+        latest = ObjectVersion.get_versions(obj.bucket,
+                                            obj.key,
+                                            desc=True).first()
+        if latest:
+            latest.is_head = True
+
+    if obj.file_id:
+        remove_file_data.delay(str(obj.file_id))
+
+    db.session.commit()
+    file_deleted.send(obj)
 
 
 class MultipartUploadAbortResource(MethodView):
@@ -104,15 +128,18 @@ class MultipartUploadAbortResource(MethodView):
 
         if not mup:
             abort(400, 'resource is not a multipart upload')
-        if mup['status'] != MultipartUploadStatus.IN_PROGRESS:
-            abort(400, 'cannot abort, upload not in progress')
+        if mup['status'] not in [MultipartUploadStatus.IN_PROGRESS,
+                                 MultipartUploadStatus.FAILED]:
+            abort(400, 'cannot abort, upload not in progress nor failed')
 
         res = current_s3.client.abort_multipart_upload(
             mup['bucket'],
             mup['key'],
             mup['upload_id'])
 
-        file_rec['multipart_upload']['status'] = MultipartUploadStatus.ABORTED
+        del files[key]
+        delete_file_object(mup['bucket'], file_rec.obj)
+
         files.flush()
         record.commit()
         db.session.commit()

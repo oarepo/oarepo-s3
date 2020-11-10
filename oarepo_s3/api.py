@@ -59,9 +59,8 @@ multipart_init_args = {
 
 
 class MultipartUploadStatus(object):
-    IN_PROGRESS = 'in_progress'
-    ABORTED = 'aborted'
-    COMPLETED = 'complete'
+    IN_PROGRESS = 'in_progress'  # upload is in ongoing state on S3 storage
+    FAILED = 'failed'  # upload did fail and wasn't aborted on S3 storage
 
 
 def multipart_init_response_factory(file_obj):
@@ -78,7 +77,8 @@ class MultipartUpload(object):
     """Class representing a multipart file upload to S3."""
 
     def __init__(self, key, expires, size,
-                 part_size=None, complete_url=None, abort_url=None, base_uri=None):
+                 part_size=None, complete_url=None,
+                 abort_url=None, base_uri=None):
         """Initialize a multipart-upload session."""
         self.key = key
         self.expires = expires

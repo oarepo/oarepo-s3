@@ -67,6 +67,7 @@ class S3FileStorage(S3FSFileStorage):
         mu.session.pop('checksum_update')
         mu.session.pop('origin')
 
+        mu.session['expires'] = mu.expires
         mu.session['key'] = mu.key
         mu.session['bucket'] = bucket
         return self.fileurl, mu.size, None
