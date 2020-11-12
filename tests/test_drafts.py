@@ -8,9 +8,7 @@
 import io
 
 from mock import patch
-from oarepo_records_draft import current_drafts
 
-from oarepo_s3.api import MultipartUploadStatus
 from tests.utils import draft_entrypoints
 
 
@@ -35,16 +33,19 @@ def test_draft_integration(app, draft_record, client):
     abort_url = resp.json['multipart_upload']['abort_url']
 
     assert complete_url and abort_url
-    assert resp.json['multipart_upload']['status'] == \
-        MultipartUploadStatus.IN_PROGRESS
 
     # Test in-progress upload can be aborted once
     resp = client.post(abort_url)
     assert resp.status_code == 200
-    assert resp.json['status'] == MultipartUploadStatus.ABORTED
+    assert resp.json['status'] == 'aborted'
 
+    # Test that aborted file doesn't exist anymore
     resp = client.post(abort_url)
-    assert resp.status_code == 400
+    assert resp.status_code == 404
+
+    resp = client.get('/draft/records/1/files/')
+    assert resp.status_code == 200
+    assert len(resp.json) == 0
 
     # Test cannot complete aborted upload
     resp = client.post(
@@ -53,7 +54,7 @@ def test_draft_integration(app, draft_record, client):
             parts=[]
         )
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 404
 
     # Test multipart upload complete endpoint
     resp = client.post(
@@ -75,6 +76,17 @@ def test_draft_integration(app, draft_record, client):
     )
     assert resp.status_code == 200
     assert resp.json['status'] == 'completed'
+    assert resp.json['ETag'] == 'etag:test'
+
+    # Test file download redirects to s3
+    resp = client.get('/draft/records/1/files/test2.txt')
+    assert resp.status_code == 302
+    assert resp.headers['Location'].startswith('https://s3')
+
+    # Test file upload metadata are gone from record files resource
+    resp = client.get('/draft/records/1/files/')
+    assert resp.status_code == 200
+    assert 'multipart_upload' not in resp.json[0]
 
     # Test if single-part file upload still works
     resp = client.put(
@@ -90,6 +102,14 @@ def test_draft_integration(app, draft_record, client):
             parts=[]
         ))
     assert resp.status_code == 400
+
+    # Test complete on a non-existent file fails
+    resp = client.post(
+        '/draft/records/1/files/nope/complete-multipart',
+        json=dict(
+            parts=[]
+        ))
+    assert resp.status_code == 404
 
     # Test abort on a non-multipart file fails
     resp = client.post('/draft/records/1/files/nmp.txt/abort-multipart')

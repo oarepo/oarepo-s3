@@ -39,10 +39,13 @@ more detailed description in :any:`configuration`.
   Javascript library.
 
 """
+import json
+from functools import wraps
+
 from flask import abort, jsonify
 from flask.views import MethodView
 from invenio_db import db
-from invenio_files_rest.models import ObjectVersion
+from invenio_files_rest.models import ObjectVersion, ObjectVersionTag
 from invenio_files_rest.proxies import current_permission_factory
 from invenio_files_rest.signals import file_deleted
 from invenio_files_rest.views import check_permission
@@ -51,7 +54,7 @@ from invenio_records_rest.views import pass_record
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
-from oarepo_s3.api import MultipartUploadStatus
+from oarepo_s3.constants import MULTIPART_CONFIG_TAG, MULTIPART_EXPIRATION_TAG
 from oarepo_s3.proxies import current_s3
 
 multipart_complete_args = {
@@ -61,45 +64,41 @@ multipart_complete_args = {
 }
 
 
-class MultipartUploadCompleteResource(MethodView):
-    """Complete multipart upload method view."""
-    view_name = '{endpoint}_upload_complete'
-
-    @pass_record
-    @use_kwargs(multipart_complete_args)
-    def post(self, pid, record, key, parts):
+def pass_file_rec(f):
+    """Decorator to retrieve a FileObject given by key from record FilesIterator."""
+    @wraps(f)
+    def inner(self, pid, record, key, *args, **kwargs):
         files = record.files
-        file_rec = files[key]
-        mup = file_rec.get('multipart_upload')
+        try:
+            file_rec = files[key]
+        except KeyError:
+            abort(404, 'upload not found')
+        return f(self, pid=pid, record=record, key=key,
+                 files=files, file_rec=file_rec, *args, **kwargs)
+    return inner
 
-        if not mup:
+
+def pass_multipart_config(f):
+    """Decorator to retrieve a multipart upload configuration from FileObject tags."""
+    @wraps(f)
+    def inner(self, pid, record, key, files, file_rec, *args, **kwargs):
+        mc = file_rec.obj.get_tags().get(MULTIPART_CONFIG_TAG, None)
+        if not mc:
             abort(400, 'resource is not a multipart upload')
-        if mup['status'] != MultipartUploadStatus.IN_PROGRESS:
-            abort(400, 'multipart upload cannot be completed')
 
-        res = current_s3.client.complete_multipart_upload(
-            mup['bucket'],
-            mup['key'],
-            parts,
-            mup['upload_id'])
-        file_rec.pop('multipart_upload')
-
-        etag = 'etag:{}'.format(res['ETag'])
-        file_rec.obj.file.checksum = etag
-        file_rec['checksum'] = etag
-        files.flush()
-        record.commit()
-        db.session.commit()
-
-        return jsonify(res)
+        mc = json.loads(mc)
+        return f(self, pid=pid, record=record, key=key, files=files,
+                 file_rec=file_rec, multipart_config=mc, *args, **kwargs)
+    return inner
 
 
-def delete_file_object(bucket, obj):
-    # Permanently delete specific object version.
+def delete_file_object_version(bucket, obj):
+    """Permanently delete a specific object version."""
     check_permission(
         current_permission_factory(bucket, 'object-delete-version'),
         hidden=False,
     )
+
     obj.remove()
     # Set newest object as head
     if obj.is_head:
@@ -112,8 +111,37 @@ def delete_file_object(bucket, obj):
     if obj.file_id:
         remove_file_data.delay(str(obj.file_id))
 
-    db.session.commit()
     file_deleted.send(obj)
+
+
+class MultipartUploadCompleteResource(MethodView):
+    """Complete multipart upload method view."""
+    view_name = '{endpoint}_upload_complete'
+
+    @pass_record
+    @pass_file_rec
+    @pass_multipart_config
+    @use_kwargs(multipart_complete_args)
+    def post(self, pid, record, key, files, file_rec, multipart_config, parts):
+        res = current_s3.client.complete_multipart_upload(
+            multipart_config['bucket'],
+            multipart_config['key'],
+            parts,
+            multipart_config['upload_id'])
+
+        with db.session.begin_nested():
+            ObjectVersionTag.delete(file_rec.obj, MULTIPART_CONFIG_TAG)
+            ObjectVersionTag.delete(file_rec.obj, MULTIPART_EXPIRATION_TAG)
+
+            etag = 'etag:{}'.format(res['ETag'])
+            file_rec.obj.file.checksum = etag
+            file_rec['checksum'] = etag
+            files.flush()
+            record.commit()
+
+        db.session.commit()
+
+        return jsonify(res)
 
 
 class MultipartUploadAbortResource(MethodView):
@@ -121,27 +149,24 @@ class MultipartUploadAbortResource(MethodView):
     view_name = '{endpoint}_upload_abort'
 
     @pass_record
-    def post(self, pid, record, key):
-        files = record.files
-        file_rec = files[key]
-        mup = file_rec.get('multipart_upload')
-
-        if not mup:
-            abort(400, 'resource is not a multipart upload')
-        if mup['status'] not in [MultipartUploadStatus.IN_PROGRESS,
-                                 MultipartUploadStatus.FAILED]:
-            abort(400, 'cannot abort, upload not in progress nor failed')
+    @pass_file_rec
+    @pass_multipart_config
+    def post(self, pid, record, files, file_rec, multipart_config, key):
 
         res = current_s3.client.abort_multipart_upload(
-            mup['bucket'],
-            mup['key'],
-            mup['upload_id'])
+            multipart_config['bucket'],
+            multipart_config['key'],
+            multipart_config['upload_id'])
 
-        del files[key]
-        delete_file_object(mup['bucket'], file_rec.obj)
+        with db.session.begin_nested():
+            delete_file_object_version(file_rec.bucket, file_rec.obj)
+            head = ObjectVersion.get(file_rec.bucket, key)
+            if not head:
+                del files.filesmap[key]
 
-        files.flush()
-        record.commit()
+            files.flush()
+            record.commit()
+
         db.session.commit()
 
         return jsonify(res)

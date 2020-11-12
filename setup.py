@@ -10,7 +10,7 @@ import os
 
 from setuptools import find_packages, setup
 
-readme = open('README.rst').read()
+readme = open('README.md').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
@@ -52,6 +52,7 @@ setup(
     version=version,
     description=__doc__,
     long_description=readme + '\n\n' + history,
+    long_description_content_type='text/markdown',
     keywords='oarepo s3',
     license='MIT',
     author='Miroslav Bauer @ CESNET',
@@ -73,7 +74,10 @@ setup(
         ],
         'oarepo_records_draft.extra_actions': [
             'oarepo_s3 = oarepo_s3.views:multipart_actions'
-        ]
+        ],
+        'invenio_celery.tasks': [
+            'oarepo_s3 = oarepo_s3.tasks',
+        ],
     },
     extras_require=extras_require,
     install_requires=install_requires,

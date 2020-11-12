@@ -12,12 +12,17 @@ import os
 import shutil
 import sys
 import uuid
+from collections import namedtuple
 from io import BytesIO
 
 import boto3
 import pytest
-from flask import Flask, current_app, url_for
+from flask import Flask, current_app, url_for, make_response, session
 from flask.testing import FlaskClient
+from flask_login import login_user, logout_user, LoginManager
+from flask_principal import identity_changed, AnonymousIdentity, Principal
+from invenio_access import InvenioAccess
+from invenio_accounts.models import Role, User
 from invenio_app.factory import create_api
 from invenio_base.signals import app_loaded
 from invenio_db import InvenioDB
@@ -50,12 +55,16 @@ from invenio_s3 import InvenioS3
 from oarepo_s3 import S3FileStorage
 from oarepo_s3.ext import OARepoS3
 from oarepo_s3.s3 import S3Client
+from tests.helpers import set_identity
 from tests.utils import draft_entrypoints
 
 SAMPLE_ALLOWED_SCHEMAS = [
     'http://localhost:5000/schemas/records/record-v1.0.0.json']
 SAMPLE_PREFERRED_SCHEMA = \
     'http://localhost:5000/schemas/records/record-v1.0.0.json'
+
+
+TestUsers = namedtuple('TestUsers', ['u1', 'u2', 'u3', 'r1', 'r2'])
 
 
 class TestSchemaV1(Schema):
@@ -105,7 +114,7 @@ class MockedS3Client(S3Client):
 
     def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
         """Faked complete of a multipart upload to AWS S3."""
-        return {'status': 'completed'}
+        return {'status': 'completed', 'ETag': 'etag:test'}
 
     def abort_multipart_upload(self, bucket, object_name, upload_id):
         """Faked cancel of an in-progress multipart upload to AWS S3."""
@@ -124,7 +133,7 @@ class JsonClient(FlaskClient):
 
 @pytest.fixture(scope='module')
 def base_app(app_config):
-    """Flask applicat-ion fixture."""
+    """Flask application fixture."""
     instance_path = os.path.join(sys.prefix, 'var', 'test-instance')
 
     # empty the instance path
@@ -138,6 +147,7 @@ def base_app(app_config):
     app_.config.update(
         TESTING=True,
         JSON_AS_ASCII=True,
+        FILES_REST_PERMISSION_FACTORY=allow_all,
         SQLALCHEMY_TRACK_MODIFICATIONS=True,
         SQLALCHEMY_DATABASE_URI=os.environ.get(
             'SQLALCHEMY_DATABASE_URI',
@@ -156,8 +166,46 @@ def base_app(app_config):
     app_.config.update(**app_config)
     app.test_client_class = JsonClient
 
+    Principal(app_)
+
+    login_manager = LoginManager()
+    login_manager.init_app(app_)
+    login_manager.login_view = 'login'
+
+    @login_manager.user_loader
+    def basic_user_loader(user_id):
+        user_obj = User.query.get(int(user_id))
+        return user_obj
+
+    @app_.route('/test/login/<int:id>', methods=['GET', 'POST'])
+    def test_login(id):
+        print("test: logging user with id", id)
+        response = make_response()
+        user = User.query.get(id)
+        print('User is', user)
+        login_user(user)
+        set_identity(user)
+        return response
+
+    @app_.route('/test/logout', methods=['GET', 'POST'])
+    def test_logout():
+        print("test: logging out")
+        response = make_response()
+        logout_user()
+
+        # Remove session keys set by Flask-Principal
+        for key in ('identity.name', 'identity.auth_type'):
+            session.pop(key, None)
+
+        # Tell Flask-Principal the user is anonymous
+        identity_changed.send(current_app._get_current_object(),
+                              identity=AnonymousIdentity())
+
+        return response
+
     from oarepo_s3 import config  # noqa
 
+    InvenioAccess(app_)
     InvenioDB(app_)
     InvenioFilesREST(app_)
     InvenioS3(app_)
@@ -264,6 +312,27 @@ def app_config(app_config):
     ))
 
     return app_config
+
+
+@pytest.fixture()
+def test_users(app, db):
+    """Returns named tuple (u1, u2, u3, r1, r2)."""
+    with db.session.begin_nested():
+        r1 = Role(name='role1')
+        r2 = Role(name='role2')
+
+        u1 = User(id=1, email='1@test.com', active=True, roles=[r1])
+        u2 = User(id=2, email='2@test.com', active=True, roles=[r1, r2])
+        u3 = User(id=3, email='3@test.com', active=True, roles=[r2])
+
+        db.session.add(u1)
+        db.session.add(u2)
+        db.session.add(u3)
+
+        db.session.add(r1)
+        db.session.add(r2)
+
+    return TestUsers(u1, u2, u3, r1, r2)
 
 
 @pytest.fixture(scope='module')
@@ -388,7 +457,7 @@ def objects():
     objs = []
     for key, content in [
         ('LICENSE', b'license file'),
-        ('README.rst', b'readme file')
+        ('README.md', b'readme file')
     ]:
         objs.append(
             (key, BytesIO(content), len(content))

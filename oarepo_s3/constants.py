@@ -4,13 +4,7 @@
 #
 # oarepo-s3 is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
+"""S3 file storage support constants for Invenio."""
 
-"""Version information for oarepo-s3.
-
-This file is imported by ``oarepo_s3.__init__``,
-and parsed by ``setup.py``.
-"""
-
-from __future__ import absolute_import, print_function
-
-__version__ = '1.2.0'
+MULTIPART_CONFIG_TAG = 'oarepo_s3_multipart_config'
+MULTIPART_EXPIRATION_TAG = 'oarepo_s3_multipart_expiration'

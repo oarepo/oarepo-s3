@@ -16,22 +16,35 @@ def test_multipart_save(app, draft_record, s3storage, prepare_es):
     fsize = 1024 * 1024 * 20
     files = draft_record.files
 
-    mu = MultipartUpload('test', 3600, fsize)
+    mu = MultipartUpload(key='test',
+                         base_uri=files.bucket.location.uri,
+                         expires=3600,
+                         size=fsize,
+                         part_size=None,
+                         complete_url=None,
+                         abort_url=None)
 
-    files[mu.key] = mu
-    file = files[mu.key].data
+    files['test'] = mu
+    file = files['test'].data
 
     assert file.get('checksum') is None
     assert file.get('size') == fsize
-    assert all([key in mu.session.keys() for key in [
-        'parts_url', 'chunk_size', 'upload_id', 'num_chunks', 'bucket']])
+    assert all([key in mu.session.keys() for key in ['parts_url',
+                                                     'chunk_size', 'upload_id',
+                                                     'num_chunks', 'bucket']])
     assert len(mu.session['parts_url']) == int(mu.session['num_chunks'])
 
 
 def test_save(app, record, s3storage, prepare_es, generic_file):
     """Test the storage save method."""
     fsize = 1024 * 1024 * 20
-    mu = MultipartUpload('test', 3600, fsize)
+    mu = MultipartUpload(key='test',
+                         base_uri='s3://test_invenio_s3',
+                         expires=3600,
+                         size=fsize,
+                         part_size=None,
+                         complete_url=None,
+                         abort_url=None)
 
     res = s3storage.save(generic_file)
     assert res == (
