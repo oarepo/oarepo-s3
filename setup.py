@@ -31,6 +31,7 @@ for reqs in extras_require.values():
     extras_require['all'].extend(reqs)
 
 setup_requires = [
+    'pytest-runner>=3.0.0',
 ]
 
 install_requires = [
