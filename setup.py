@@ -30,10 +30,6 @@ extras_require['all'] = []
 for reqs in extras_require.values():
     extras_require['all'].extend(reqs)
 
-setup_requires = [
-    'pytest-runner>=3.0.0,<5',
-]
-
 install_requires = [
     'invenio-s3>=1.0.3',
     'oarepo>=3.3.0'
