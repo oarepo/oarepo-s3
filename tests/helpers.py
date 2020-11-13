@@ -22,6 +22,7 @@ def set_identity(u):
 
 @identity_loaded.connect
 def identity_loaded_callback(sender, identity=None, **kwargs):
+    """Callback for identity_loaded signal."""
     print('Identity loaded', identity, current_user)
     if not current_user.is_authenticated:
         return
