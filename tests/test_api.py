@@ -55,5 +55,6 @@ def test_multipart_uploader(app, record, client):
     assert isinstance(multi['upload_id'], str)
 
     tags = file_rec.obj.get_tags()
-    assert list(tags.keys()) == [MULTIPART_CONFIG_TAG, MULTIPART_EXPIRATION_TAG]
+    assert list(tags.keys()) == [MULTIPART_CONFIG_TAG,
+                                 MULTIPART_EXPIRATION_TAG]
     assert json.loads(tags[MULTIPART_CONFIG_TAG]) is not None
