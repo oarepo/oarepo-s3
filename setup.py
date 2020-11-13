@@ -14,8 +14,6 @@ readme = open('README.md').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
-    'oarepo[tests]>=3.3.0',
-    'oarepo-records-draft>=5.0.0a19',
     'moto>=1.3.7',
 ]
 
@@ -23,7 +21,11 @@ extras_require = {
     'docs': [
         'Sphinx>=1.5.1,<3.0.2',
     ],
-    'tests': tests_require,
+    'tests': {
+        *tests_require,
+        'oarepo[tests]>=3.3.0',
+        'oarepo-records-draft>=5.0.0a19',
+    }
 }
 
 extras_require['all'] = []
