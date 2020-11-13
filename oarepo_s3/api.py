@@ -114,7 +114,7 @@ def multipart_uploader(record, key, files, pid, request, endpoint,
         MultipartUploadCompleteResource
 
     expiration = current_app.config['S3_MULTIPART_UPLOAD_EXPIRATION']
-    date_expiry = datetime.now() + timedelta(seconds=expiration)
+    date_expiry = datetime.utcnow() + timedelta(seconds=expiration)
     complete = resolver(MultipartUploadCompleteResource.view_name, key=key)
     abort = resolver(MultipartUploadAbortResource.view_name, key=key)
 

@@ -153,8 +153,6 @@ CELERY_BEAT_SCHEDULE = {
 }
 ```
 
-
-
   [image]: https://img.shields.io/github/license/oarepo/oarepo-s3.svg
   [1]: https://github.com/oarepo/oarepo-s3/blob/master/LICENSE
   [2]: https://img.shields.io/travis/oarepo/oarepo-s3.svg
