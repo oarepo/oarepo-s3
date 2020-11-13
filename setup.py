@@ -30,6 +30,9 @@ extras_require['all'] = []
 for reqs in extras_require.values():
     extras_require['all'].extend(reqs)
 
+setup_requires = [
+]
+
 install_requires = [
     'invenio-s3>=1.0.3',
     'oarepo>=3.3.0'
