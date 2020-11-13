@@ -37,7 +37,7 @@ before_install:
   - "requirements-builder -e all --level=dev --req requirements-devel.txt setup.py > .travis-devel-requirements.txt"
 
 install:
-  - "travis_retry pip install -e .[tests]"
+  - "travis_retry pip install oarepo[tests]"
   - "travis_retry pip install -r .travis-${REQUIREMENTS}-requirements.txt"
   - "travis_retry pip install 3rdparty/s3-client"
   - "pip freeze"
