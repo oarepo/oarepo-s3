@@ -41,9 +41,7 @@ from invenio_records_rest.utils import PIDConverter, allow_all
 from invenio_records_rest.views import create_blueprint_from_app
 from invenio_rest import InvenioREST
 from invenio_search import InvenioSearch
-from invenio_search.cli import destroy, init
 from marshmallow import INCLUDE, Schema, fields
-from mock import patch
 from moto import mock_s3
 from oarepo_records_draft.ext import RecordsDraft
 from oarepo_validate import MarshmallowValidatedRecordMixin, \
