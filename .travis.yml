@@ -39,7 +39,6 @@ before_install:
 install:
   - "travis_retry pip install -r .travis-${REQUIREMENTS}-requirements.txt"
   - "travis_retry pip install 3rdparty/s3-client"
-  - "travis_retry pip install -e .[all]"
   - "travis_retry pip install -e .[tests]"
   - "pip freeze"
 
