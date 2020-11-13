@@ -17,10 +17,10 @@ from io import BytesIO
 
 import boto3
 import pytest
-from flask import Flask, current_app, url_for, make_response, session
+from flask import Flask, current_app, make_response, session, url_for
 from flask.testing import FlaskClient
-from flask_login import login_user, logout_user, LoginManager
-from flask_principal import identity_changed, AnonymousIdentity, Principal
+from flask_login import LoginManager, login_user, logout_user
+from flask_principal import AnonymousIdentity, Principal, identity_changed
 from invenio_access import InvenioAccess
 from invenio_accounts.models import Role, User
 from invenio_app.factory import create_api

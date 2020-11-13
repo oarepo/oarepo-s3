@@ -9,7 +9,8 @@
 import flask
 from flask import current_app
 from flask_login import current_user
-from flask_principal import Identity, identity_changed, identity_loaded, RoleNeed, UserNeed
+from flask_principal import Identity, RoleNeed, UserNeed, identity_changed, \
+    identity_loaded
 from invenio_access import authenticated_user
 
 

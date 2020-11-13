@@ -48,7 +48,7 @@ from invenio_files_rest.models import ObjectVersion, ObjectVersionTag
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
-from oarepo_s3.constants import MULTIPART_EXPIRATION_TAG, MULTIPART_CONFIG_TAG
+from oarepo_s3.constants import MULTIPART_CONFIG_TAG, MULTIPART_EXPIRATION_TAG
 
 multipart_init_args = {
     'size': fields.Int(

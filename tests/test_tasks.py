@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import, print_function
 
-from flask import url_for, request
+from flask import request, url_for
 from werkzeug.datastructures import ImmutableMultiDict
 
 from oarepo_s3.api import multipart_uploader

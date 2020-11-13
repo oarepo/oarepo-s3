@@ -48,8 +48,8 @@ from invenio_db import db
 from invenio_files_rest.models import ObjectVersion, ObjectVersionTag
 from invenio_files_rest.proxies import current_permission_factory
 from invenio_files_rest.signals import file_deleted
-from invenio_files_rest.views import check_permission
 from invenio_files_rest.tasks import remove_file_data
+from invenio_files_rest.views import check_permission
 from invenio_records_rest.views import pass_record
 from webargs import fields
 from webargs.flaskparser import use_kwargs
