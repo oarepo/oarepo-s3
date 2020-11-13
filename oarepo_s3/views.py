@@ -65,7 +65,9 @@ multipart_complete_args = {
 
 
 def pass_file_rec(f):
-    """Decorator to retrieve a FileObject given by key from record FilesIterator."""
+    """Decorator to retrieve a FileObject
+       given by key from record FilesIterator.
+    """
     @wraps(f)
     def inner(self, pid, record, key, *args, **kwargs):
         files = record.files
@@ -79,7 +81,9 @@ def pass_file_rec(f):
 
 
 def pass_multipart_config(f):
-    """Decorator to retrieve a multipart upload configuration from FileObject tags."""
+    """Decorator to retrieve a multipart upload
+       configuration from FileObject tags.
+    """
     @wraps(f)
     def inner(self, pid, record, key, files, file_rec, *args, **kwargs):
         mc = file_rec.obj.get_tags().get(MULTIPART_CONFIG_TAG, None)

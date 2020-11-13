@@ -31,7 +31,7 @@ def cleanup_expired_multipart_uploads():
         return object_version
 
     with db.session.begin_nested():
-        q: BaseQuery = ObjectVersionTag.query \
+        q = ObjectVersionTag.query \
             .options(lazyload('object_version')) \
             .filter_by(key=MULTIPART_EXPIRATION_TAG) \
             .filter(ObjectVersionTag.value < expire_threshold.isoformat())
