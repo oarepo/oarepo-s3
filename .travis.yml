@@ -22,9 +22,12 @@ cache:
   - pip
 
 env:
+  global:
+    - ES7_DOWNLOAD_URL="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.5.1-linux-x86_64.tar.gz"
+    - ES_HOST=127.0.0.1
   matrix:
-    - REQUIREMENTS=release DEPLOY=true
-    - REQUIREMENTS=devel
+    - REQUIREMENTS=release DEPLOY=true ES=$ES7_DOWNLOAD_URL
+    - REQUIREMENTS=devel ES=$ES7_DOWNLOAD_URL
 
 python:
   - "3.8"
@@ -35,6 +38,11 @@ before_install:
   - "requirements-builder -e all --level=min setup.py > .travis-lowest-requirements.txt"
   - "requirements-builder -e all --level=pypi setup.py > .travis-release-requirements.txt"
   - "requirements-builder -e all --level=dev --req requirements-devel.txt setup.py > .travis-devel-requirements.txt"
+  - mkdir /tmp/elasticsearch
+  - wget -O - $ES | tar xz --directory=/tmp/elasticsearch --strip-components=1
+  - "/tmp/elasticsearch/bin/elasticsearch &"
+  - sleep 10
+
 
 install:
   - "travis_retry pip install 3rdparty/s3-client"
