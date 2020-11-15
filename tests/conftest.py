@@ -389,7 +389,7 @@ def s3_bucket(appctx):
 
 
 @pytest.fixture(scope='function')
-def s3storage(s3_bucket, s3_testpath):
+def s3storage(s3_testpath):
     """Instance of S3FileStorage."""
     s3_storage = S3FileStorage(s3_testpath)
     return s3_storage
