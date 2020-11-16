@@ -129,6 +129,14 @@ class JsonClient(FlaskClient):
         return super().open(*args, **kwargs)
 
 
+@pytest.fixture(scope='session')
+def celery_config():
+    return {
+        'result_backend': 'rpc',
+        'task_always_eager': True
+    }
+
+
 @pytest.fixture(scope='module')
 def base_app(app_config):
     """Flask application fixture."""

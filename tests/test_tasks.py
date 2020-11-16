@@ -15,7 +15,7 @@ from oarepo_s3.api import multipart_uploader
 from oarepo_s3.tasks import cleanup_expired_multipart_uploads
 
 
-def test_cleanup_expired_multipart_uploads(app, draft_record,
+def test_cleanup_expired_multipart_uploads(app, draft_record, celery_worker,
                                            client, s3storage, prepare_es):
     """"Test expired uploads cleanup."""
     fsize = 1024 * 1024 * 512
