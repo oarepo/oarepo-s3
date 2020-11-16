@@ -8,11 +8,14 @@
 
 from __future__ import absolute_import, print_function
 
+import json
+
 import flask
 from flask import request, url_for
 from werkzeug.datastructures import ImmutableMultiDict
 
-from oarepo_s3.api import MultipartUploadStatus, multipart_uploader
+from oarepo_s3.api import multipart_uploader
+from oarepo_s3.constants import MULTIPART_CONFIG_TAG, MULTIPART_EXPIRATION_TAG
 
 
 def test_multipart_uploader(app, record, client):
@@ -46,10 +49,12 @@ def test_multipart_uploader(app, record, client):
     multi = response['multipart_upload']
     assert isinstance(response, dict)
     assert multi['bucket'] == 'test_invenio_s3'
-    assert multi['num_chunks'] == 33
+    assert multi['num_chunks'] == 32
     assert multi['chunk_size'] == 16777216
-    assert len(multi['parts_url']) == 33
-    assert multi['status'] == MultipartUploadStatus.IN_PROGRESS
+    assert len(multi['parts_url']) == 32
     assert isinstance(multi['upload_id'], str)
 
-    assert file_rec.get('multipart_upload', None) is not None
+    tags = file_rec.obj.get_tags()
+    assert list(tags.keys()) == [MULTIPART_CONFIG_TAG,
+                                 MULTIPART_EXPIRATION_TAG]
+    assert json.loads(tags[MULTIPART_CONFIG_TAG]) is not None

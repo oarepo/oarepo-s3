@@ -10,20 +10,22 @@ import os
 
 from setuptools import find_packages, setup
 
-readme = open('README.rst').read()
+readme = open('README.md').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
-    'oarepo[tests]>=3.3.0',
-    'oarepo-records-draft>=5.0.0a19',
-    'moto>=1.3.7'
+    'moto[s3]>=1.3.7',
 ]
 
 extras_require = {
     'docs': [
         'Sphinx>=1.5.1,<3.0.2',
     ],
-    'tests': tests_require,
+    'tests': {
+        *tests_require,
+        'oarepo[tests]>=3.3.0',
+        'oarepo-records-draft>=5.0.0a19',
+    }
 }
 
 extras_require['all'] = []
@@ -31,12 +33,11 @@ for reqs in extras_require.values():
     extras_require['all'].extend(reqs)
 
 setup_requires = [
-    'pytest-runner>=3.0.0,<5',
+    'pytest-runner>=3.0.0',
 ]
 
 install_requires = [
     'invenio-s3>=1.0.3',
-    'oarepo>=3.3.0'
 ]
 
 packages = find_packages()
@@ -52,6 +53,7 @@ setup(
     version=version,
     description=__doc__,
     long_description=readme + '\n\n' + history,
+    long_description_content_type='text/markdown',
     keywords='oarepo s3',
     license='MIT',
     author='Miroslav Bauer @ CESNET',
@@ -73,7 +75,10 @@ setup(
         ],
         'oarepo_records_draft.extra_actions': [
             'oarepo_s3 = oarepo_s3.views:multipart_actions'
-        ]
+        ],
+        'invenio_celery.tasks': [
+            'oarepo_s3 = oarepo_s3.tasks',
+        ],
     },
     extras_require=extras_require,
     install_requires=install_requires,

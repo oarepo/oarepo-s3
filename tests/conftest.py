@@ -12,12 +12,17 @@ import os
 import shutil
 import sys
 import uuid
+from collections import namedtuple
 from io import BytesIO
 
 import boto3
 import pytest
-from flask import Flask, current_app, url_for
+from flask import Flask, current_app, make_response, session, url_for
 from flask.testing import FlaskClient
+from flask_login import LoginManager, login_user, logout_user
+from flask_principal import AnonymousIdentity, Principal, identity_changed
+from invenio_access import InvenioAccess
+from invenio_accounts.models import Role, User
 from invenio_app.factory import create_api
 from invenio_base.signals import app_loaded
 from invenio_db import InvenioDB
@@ -36,9 +41,7 @@ from invenio_records_rest.utils import PIDConverter, allow_all
 from invenio_records_rest.views import create_blueprint_from_app
 from invenio_rest import InvenioREST
 from invenio_search import InvenioSearch
-from invenio_search.cli import destroy, init
 from marshmallow import INCLUDE, Schema, fields
-from mock import patch
 from moto import mock_s3
 from oarepo_records_draft.ext import RecordsDraft
 from oarepo_validate import MarshmallowValidatedRecordMixin, \
@@ -50,12 +53,16 @@ from invenio_s3 import InvenioS3
 from oarepo_s3 import S3FileStorage
 from oarepo_s3.ext import OARepoS3
 from oarepo_s3.s3 import S3Client
+from tests.helpers import set_identity
 from tests.utils import draft_entrypoints
 
 SAMPLE_ALLOWED_SCHEMAS = [
     'http://localhost:5000/schemas/records/record-v1.0.0.json']
 SAMPLE_PREFERRED_SCHEMA = \
     'http://localhost:5000/schemas/records/record-v1.0.0.json'
+
+
+TestUsers = namedtuple('TestUsers', ['u1', 'u2', 'u3', 'r1', 'r2'])
 
 
 class TestSchemaV1(Schema):
@@ -105,7 +112,7 @@ class MockedS3Client(S3Client):
 
     def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
         """Faked complete of a multipart upload to AWS S3."""
-        return {'status': 'completed'}
+        return {'status': 'completed', 'ETag': 'etag:test'}
 
     def abort_multipart_upload(self, bucket, object_name, upload_id):
         """Faked cancel of an in-progress multipart upload to AWS S3."""
@@ -122,9 +129,18 @@ class JsonClient(FlaskClient):
         return super().open(*args, **kwargs)
 
 
+@pytest.fixture(scope='session')
+def celery_config():
+    """Celery worker config."""
+    return {
+        'result_backend': 'rpc',
+        'task_always_eager': True
+    }
+
+
 @pytest.fixture(scope='module')
 def base_app(app_config):
-    """Flask applicat-ion fixture."""
+    """Flask application fixture."""
     instance_path = os.path.join(sys.prefix, 'var', 'test-instance')
 
     # empty the instance path
@@ -138,6 +154,7 @@ def base_app(app_config):
     app_.config.update(
         TESTING=True,
         JSON_AS_ASCII=True,
+        FILES_REST_PERMISSION_FACTORY=allow_all,
         SQLALCHEMY_TRACK_MODIFICATIONS=True,
         SQLALCHEMY_DATABASE_URI=os.environ.get(
             'SQLALCHEMY_DATABASE_URI',
@@ -150,14 +167,53 @@ def base_app(app_config):
         RECORDS_REST_ENDPOINTS={},
         SEARCH_INDEX_PREFIX='test-',
         FILES_REST_DEFAULT_STORAGE_CLASS='S',
+        CELERY_ALWAYS_EAGER=True,
         JSONSCHEMAS_HOST='localhost:5000',
         SEARCH_ELASTIC_HOSTS=os.environ.get('SEARCH_ELASTIC_HOSTS', None)
     )
     app_.config.update(**app_config)
     app.test_client_class = JsonClient
 
+    Principal(app_)
+
+    login_manager = LoginManager()
+    login_manager.init_app(app_)
+    login_manager.login_view = 'login'
+
+    @login_manager.user_loader
+    def basic_user_loader(user_id):
+        user_obj = User.query.get(int(user_id))
+        return user_obj
+
+    @app_.route('/test/login/<int:id>', methods=['GET', 'POST'])
+    def test_login(id):
+        print("test: logging user with id", id)
+        response = make_response()
+        user = User.query.get(id)
+        print('User is', user)
+        login_user(user)
+        set_identity(user)
+        return response
+
+    @app_.route('/test/logout', methods=['GET', 'POST'])
+    def test_logout():
+        print("test: logging out")
+        response = make_response()
+        logout_user()
+
+        # Remove session keys set by Flask-Principal
+        for key in ('identity.name', 'identity.auth_type'):
+            session.pop(key, None)
+
+        # Tell Flask-Principal the user is anonymous
+        identity_changed.send(current_app._get_current_object(),
+                              identity=AnonymousIdentity())
+
+        return response
+
     from oarepo_s3 import config  # noqa
 
+    InvenioAccess(app_)
     InvenioDB(app_)
     InvenioFilesREST(app_)
     InvenioS3(app_)
@@ -266,6 +322,27 @@ def app_config(app_config):
     return app_config
 
 
+@pytest.fixture()
+def test_users(app, db):
+    """Returns named tuple (u1, u2, u3, r1, r2)."""
+    with db.session.begin_nested():
+        r1 = Role(name='role1')
+        r2 = Role(name='role2')
+
+        u1 = User(id=1, email='1@test.com', active=True, roles=[r1])
+        u2 = User(id=2, email='2@test.com', active=True, roles=[r1, r2])
+        u3 = User(id=3, email='3@test.com', active=True, roles=[r2])
+
+        db.session.add(u1)
+        db.session.add(u2)
+        db.session.add(u3)
+
+        db.session.add(r1)
+        db.session.add(r2)
+
+    return TestUsers(u1, u2, u3, r1, r2)
+
+
 @pytest.fixture(scope='module')
 def draft_config(app_config):
     """Draft endpoints configuration."""
@@ -306,13 +383,8 @@ def create_app():
 def s3_bucket(appctx):
     """S3 bucket fixture."""
     with mock_s3():
-        session = boto3.Session(
-            aws_access_key_id=current_app.config.get('S3_ACCESS_KEY_ID'),
-            aws_secret_access_key=current_app.config.get(
-                'S3_SECRECT_ACCESS_KEY'),
-        )
-        s3 = session.resource('s3')
-        bucket = s3.create_bucket(Bucket='test_invenio_s3')
+        conn = boto3.resource('s3', region_name='us-east-1')
+        bucket = conn.create_bucket(Bucket='test_invenio_s3')
 
         yield bucket
 
@@ -322,7 +394,7 @@ def s3_bucket(appctx):
 
 
 @pytest.fixture(scope='function')
-def s3storage(s3_bucket, s3_testpath):
+def s3storage(s3_testpath):
     """Instance of S3FileStorage."""
     s3_storage = S3FileStorage(s3_testpath)
     return s3_storage
@@ -388,7 +460,7 @@ def objects():
     objs = []
     for key, content in [
         ('LICENSE', b'license file'),
-        ('README.rst', b'readme file')
+        ('README.md', b'readme file')
     ]:
         objs.append(
             (key, BytesIO(content), len(content))

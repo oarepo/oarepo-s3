@@ -9,4 +9,4 @@
 pydocstyle invenio_s3 tests docs && \
 isort -c -df oarepo_s3 && \
 check-manifest --ignore ".travis-*" && \
-python setup.py test
+pytest -s tests/
