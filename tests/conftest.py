@@ -373,13 +373,8 @@ def create_app():
 def s3_bucket(appctx):
     """S3 bucket fixture."""
     with mock_s3():
-        session = boto3.Session(
-            aws_access_key_id=current_app.config.get('S3_ACCESS_KEY_ID'),
-            aws_secret_access_key=current_app.config.get(
-                'S3_SECRECT_ACCESS_KEY'),
-        )
-        s3 = session.resource('s3')
-        bucket = s3.create_bucket(Bucket='test_invenio_s3')
+        conn = boto3.resource('s3', region_name='us-east-1')
+        bucket = conn.create_bucket(Bucket='test_invenio_s3')
 
         yield bucket
 
