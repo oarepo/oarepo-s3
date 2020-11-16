@@ -131,6 +131,7 @@ class JsonClient(FlaskClient):
 
 @pytest.fixture(scope='session')
 def celery_config():
+    """Celery worker config."""
     return {
         'result_backend': 'rpc',
         'task_always_eager': True
