@@ -12,6 +12,7 @@ from flask import request, url_for
 from werkzeug.datastructures import ImmutableMultiDict
 
 from oarepo_s3.api import multipart_uploader
+from celery.contrib.pytest import celery_worker
 from oarepo_s3.tasks import cleanup_expired_multipart_uploads
 
 

@@ -7,12 +7,13 @@
 """Drafts integration tests."""
 import io
 
+from celery.contrib.pytest import celery_worker, celery_session_worker
 from mock import patch
 
 from tests.utils import draft_entrypoints
 
 
-@patch('pkg_resources.iter_entry_points', draft_entrypoints)
+@patch('pkg_resources.iter_entry_points', draft_entrypoints, celery_session_worker)
 def test_draft_integration(app, draft_record, client):
     """Test integration with invenio records draft library."""
     fsize = 1024 * 1024 * 200

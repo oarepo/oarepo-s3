@@ -12,6 +12,14 @@ sudo: false
 
 language: python
 
+addons:
+  apt:
+    packages:
+    - rabbitmq-server
+
+services:
+  - rabbitmq
+
 matrix:
   fast_finish: true
   allow_failures:
