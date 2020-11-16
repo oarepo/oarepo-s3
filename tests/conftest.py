@@ -158,6 +158,7 @@ def base_app(app_config):
         RECORDS_REST_ENDPOINTS={},
         SEARCH_INDEX_PREFIX='test-',
         FILES_REST_DEFAULT_STORAGE_CLASS='S',
+        CELERY_ALWAYS_EAGER=True,
         JSONSCHEMAS_HOST='localhost:5000',
         SEARCH_ELASTIC_HOSTS=os.environ.get('SEARCH_ELASTIC_HOSTS', None)
     )
