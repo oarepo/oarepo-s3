@@ -50,6 +50,7 @@ before_install:
   - wget -O - $ES | tar xz --directory=/tmp/elasticsearch --strip-components=1
   - "/tmp/elasticsearch/bin/elasticsearch &"
   - sleep 10
+  - "cat .travis-release-requirements.txt"
 
 
 install:
