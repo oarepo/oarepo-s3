@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2018, 2019, 2020 Esteban J. G. Gabancho.
+# Copyright (C) 2020 CESNET
 #
 # oarepo-s3 is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -56,6 +56,8 @@ from webargs.flaskparser import use_kwargs
 
 from oarepo_s3.constants import MULTIPART_CONFIG_TAG, MULTIPART_EXPIRATION_TAG
 from oarepo_s3.proxies import current_s3
+from oarepo_s3.signals import after_upload_complete, before_upload_complete, before_upload_abort, \
+    after_upload_abort
 
 multipart_complete_args = {
     'parts': fields.List(
@@ -127,6 +129,12 @@ class MultipartUploadCompleteResource(MethodView):
     @pass_multipart_config
     @use_kwargs(multipart_complete_args)
     def post(self, pid, record, key, files, file_rec, multipart_config, parts):
+        before_upload_complete.send(file_rec,
+                                    record=record,
+                                    file=file_rec,
+                                    parts=parts,
+                                    multipart_config=multipart_config)
+
         res = current_s3.client.complete_multipart_upload(
             multipart_config['bucket'],
             multipart_config['key'],
@@ -145,6 +153,8 @@ class MultipartUploadCompleteResource(MethodView):
 
         db.session.commit()
 
+        after_upload_complete.send(file_rec, record=record, file=file_rec)
+
         return jsonify(res)
 
 
@@ -156,6 +166,10 @@ class MultipartUploadAbortResource(MethodView):
     @pass_file_rec
     @pass_multipart_config
     def post(self, pid, record, files, file_rec, multipart_config, key):
+        before_upload_abort.send(file_rec,
+                                 record=record,
+                                 file=file_rec,
+                                 multipart_config=multipart_config)
 
         res = current_s3.client.abort_multipart_upload(
             multipart_config['bucket'],
@@ -172,6 +186,8 @@ class MultipartUploadAbortResource(MethodView):
             record.commit()
 
         db.session.commit()
+
+        after_upload_abort.send(file_rec, record=record, file=file_rec)
 
         return jsonify(res)
 
