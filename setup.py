@@ -38,7 +38,6 @@ setup_requires = [
 
 install_requires = [
     'invenio-s3>=1.0.3',
-    'pip==20.2.4'
 ]
 
 packages = find_packages()
