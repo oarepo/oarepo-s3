@@ -153,13 +153,13 @@ class MultipartUploadCompleteResource(MethodView):
             etag = 'etag:{}'.format(res['ETag'])
             file_rec.obj.file.checksum = etag
             file_rec['checksum'] = etag
+
+            after_upload_complete.send(file_rec, record=record, file=file_rec, files=files)
+
             files.flush()
             record.commit()
 
         db.session.commit()
-
-        after_upload_complete.send(file_rec, record=record, file=file_rec)
-
         return jsonify(res)
 
 
