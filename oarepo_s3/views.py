@@ -51,6 +51,7 @@ from invenio_files_rest.signals import file_deleted
 from invenio_files_rest.tasks import remove_file_data
 from invenio_files_rest.views import check_permission
 from invenio_records_rest.views import pass_record
+from invenio_rest import csrf
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
@@ -70,6 +71,7 @@ def pass_file_rec(f):
     """Decorator to retrieve a FileObject
        given by key from record FilesIterator.
     """
+
     @wraps(f)
     def inner(self, pid, record, key, *args, **kwargs):
         files = record.files
@@ -79,6 +81,7 @@ def pass_file_rec(f):
             abort(404, 'upload not found')
         return f(self, pid=pid, record=record, key=key,
                  files=files, file_rec=file_rec, *args, **kwargs)
+
     return inner
 
 
@@ -86,6 +89,7 @@ def pass_multipart_config(f):
     """Decorator to retrieve a multipart upload
        configuration from FileObject tags.
     """
+
     @wraps(f)
     def inner(self, pid, record, key, files, file_rec, *args, **kwargs):
         mc = file_rec.obj.get_tags().get(MULTIPART_CONFIG_TAG, None)
@@ -95,6 +99,7 @@ def pass_multipart_config(f):
         mc = json.loads(mc)
         return f(self, pid=pid, record=record, key=key, files=files,
                  file_rec=file_rec, multipart_config=mc, *args, **kwargs)
+
     return inner
 
 
@@ -198,11 +203,11 @@ def multipart_actions(code, files, rest_endpoint, extra, is_draft):
     # rest path -> view
     return {
         'files/<key>/complete-multipart':
-            MultipartUploadCompleteResource.as_view(
+            csrf.exempt(MultipartUploadCompleteResource.as_view(
                 MultipartUploadCompleteResource.view_name.format(endpoint=code)
-            ),
+            )),
         'files/<key>/abort-multipart':
-            MultipartUploadAbortResource.as_view(
+            csrf.exempt(MultipartUploadAbortResource.as_view(
                 MultipartUploadAbortResource.view_name.format(endpoint=code)
-            )
+            ))
     }
