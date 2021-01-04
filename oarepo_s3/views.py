@@ -160,7 +160,7 @@ class MultipartUploadCompleteResource(MethodView):
             record.commit()
 
         db.session.commit()
-        return jsonify(res)
+        return jsonify(file_rec.dumps())
 
 
 class MultipartUploadAbortResource(MethodView):
