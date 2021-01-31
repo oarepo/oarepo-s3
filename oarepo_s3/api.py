@@ -149,7 +149,6 @@ def multipart_uploader(record, key, files, pid, request, endpoint,
             )
             db.session.add(exp_tag)
 
-        db.session.commit()
     else:
         files[key] = request.stream
 

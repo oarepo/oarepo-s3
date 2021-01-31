@@ -22,9 +22,9 @@ extras_require = {
         'Sphinx>=1.5.1,<3.0.2',
     ],
     'tests': {
+        'oarepo[tests]>=3.3.46',
         *tests_require,
-        'oarepo[tests]>=3.3.0',
-        'oarepo-records-draft>=5.0.0a19',
+        'oarepo-records-draft>=5.5.1',
     }
 }
 

@@ -57,8 +57,8 @@ from webargs.flaskparser import use_kwargs
 
 from oarepo_s3.constants import MULTIPART_CONFIG_TAG, MULTIPART_EXPIRATION_TAG
 from oarepo_s3.proxies import current_s3
-from oarepo_s3.signals import after_upload_complete, before_upload_complete, before_upload_abort, \
-    after_upload_abort
+from oarepo_s3.signals import after_upload_abort, after_upload_complete, \
+    before_upload_abort, before_upload_complete
 
 multipart_complete_args = {
     'parts': fields.List(
