@@ -125,6 +125,15 @@ def delete_file_object_version(bucket, obj):
     file_deleted.send(obj)
 
 
+def lock_record(record):
+    # lock the record in case of multiple uploads to the same record
+    cls = type(record)
+    obj = cls.model_cls.query.filter_by(id=record.id). \
+        filter(cls.model_cls.json != None).with_for_update().one()
+    db.session.expire(obj)
+    return cls.get_record(record.id)
+
+
 class MultipartUploadCompleteResource(MethodView):
     """Complete multipart upload method view."""
     view_name = '{endpoint}_upload_complete'
@@ -134,6 +143,9 @@ class MultipartUploadCompleteResource(MethodView):
     @pass_multipart_config
     @use_kwargs(multipart_complete_args)
     def post(self, pid, record, key, files, file_rec, multipart_config, parts):
+
+        record = lock_record(record)
+
         before_upload_complete.send(file_rec,
                                     record=record,
                                     file=file_rec,
@@ -171,6 +183,9 @@ class MultipartUploadAbortResource(MethodView):
     @pass_file_rec
     @pass_multipart_config
     def post(self, pid, record, files, file_rec, multipart_config, key):
+
+        record = lock_record(record)
+
         before_upload_abort.send(file_rec,
                                  record=record,
                                  file=file_rec,
