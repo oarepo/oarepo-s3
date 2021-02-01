@@ -16,8 +16,7 @@ from celery.contrib.pytest import celery_worker
 from oarepo_s3.tasks import cleanup_expired_multipart_uploads
 
 
-def test_cleanup_expired_multipart_uploads(app, draft_record, celery_worker,
-                                           client, s3storage, prepare_es):
+def test_cleanup_expired_multipart_uploads(app, draft_record, client, s3storage, prepare_es):
     """"Test expired uploads cleanup."""
     fsize = 1024 * 1024 * 512
     files = draft_record.files

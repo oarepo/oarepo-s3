@@ -49,9 +49,9 @@ def test_multipart_uploader(app, record, client):
     multi = response['multipart_upload']
     assert isinstance(response, dict)
     assert multi['bucket'] == 'test_invenio_s3'
-    assert multi['num_chunks'] == 32
+    assert multi['num_chunks'] == 33
     assert multi['chunk_size'] == 16777216
-    assert len(multi['parts_url']) == 32
+    assert len(multi['parts_url']) == 33
     assert isinstance(multi['upload_id'], str)
 
     tags = file_rec.obj.get_tags()
