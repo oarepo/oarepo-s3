@@ -42,7 +42,7 @@ more detailed description in :any:`configuration`.
 import json
 from functools import wraps
 
-from flask import abort, jsonify
+from flask import abort, jsonify, request
 from flask.views import MethodView
 from invenio_db import db
 from invenio_files_rest.models import ObjectVersion, ObjectVersionTag
@@ -50,8 +50,10 @@ from invenio_files_rest.proxies import current_permission_factory
 from invenio_files_rest.signals import file_deleted
 from invenio_files_rest.tasks import remove_file_data
 from invenio_files_rest.views import check_permission
+from invenio_records_rest.errors import PIDResolveRESTError
 from invenio_records_rest.views import pass_record
 from invenio_rest import csrf
+from sqlalchemy.exc import SQLAlchemyError
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
@@ -65,6 +67,24 @@ multipart_complete_args = {
         fields.Dict,
         locations=('json', 'form'))
 }
+
+
+def pass_locked_record(f):
+    """Decorator to retrieve persistent identifier and record.
+
+    This decorator will resolve the ``pid_value`` parameter from the route
+    pattern and resolve it to a PID and a record, which are then available in
+    the decorated function as ``pid`` and ``record`` kwargs respectively.
+    """
+    @wraps(f)
+    def inner(self, pid_value, *args, **kwargs):
+        try:
+            pid, record = request.view_args['pid_value'].data
+            record = lock_record(record)
+            return f(self, pid=pid, record=record, *args, **kwargs)
+        except SQLAlchemyError:
+            raise PIDResolveRESTError(pid_value)
+    return inner
 
 
 def pass_file_rec(f):
@@ -138,14 +158,11 @@ class MultipartUploadCompleteResource(MethodView):
     """Complete multipart upload method view."""
     view_name = '{endpoint}_upload_complete'
 
-    @pass_record
+    @pass_locked_record
     @pass_file_rec
     @pass_multipart_config
     @use_kwargs(multipart_complete_args)
     def post(self, pid, record, key, files, file_rec, multipart_config, parts):
-
-        record = lock_record(record)
-
         before_upload_complete.send(file_rec,
                                     record=record,
                                     file=file_rec,
@@ -179,13 +196,10 @@ class MultipartUploadAbortResource(MethodView):
     """Cancel a multipart upload method view."""
     view_name = '{endpoint}_upload_abort'
 
-    @pass_record
+    @pass_locked_record
     @pass_file_rec
     @pass_multipart_config
     def post(self, pid, record, files, file_rec, multipart_config, key):
-
-        record = lock_record(record)
-
         before_upload_abort.send(file_rec,
                                  record=record,
                                  file=file_rec,
