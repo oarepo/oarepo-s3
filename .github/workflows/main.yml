@@ -39,7 +39,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip<20.0.0 wheel setuptools
+          python -m pip install --upgrade 'pip<20.0.0' wheel setuptools
           pip install -e .[tests]
       - name: Test with pytest
         run: |
