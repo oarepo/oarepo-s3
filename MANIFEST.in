@@ -31,3 +31,4 @@ include .gitmodules
 include docker-compose.yml
 include docker-services.yml
 exclude .envrc
+exclude 3rdparty
