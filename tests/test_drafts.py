@@ -76,8 +76,7 @@ def test_draft_integration(app, draft_record, client):
         )
     )
     assert resp.status_code == 200
-    assert resp.json['status'] == 'completed'
-    assert resp.json['ETag'] == 'etag:test'
+    assert 'etag:test' in resp.json['checksum']
 
     # Test file download redirects to s3
     resp = client.get('/draft/records/1/files/test2.txt')
