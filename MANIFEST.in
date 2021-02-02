@@ -27,6 +27,7 @@ recursive-exclude 3rdparty .gitkeep
 recursive-exclude 3rdparty *.yaml
 recursive-include 3rdparty *.toml
 recursive-include 3rdparty *.txt
+recursive-exclude 3rdparty *
 include .gitmodules
 include docker-compose.yml
 include docker-services.yml
