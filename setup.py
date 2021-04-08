@@ -40,7 +40,7 @@ install_requires = [
     'invenio-s3>=1.0.3',
 ]
 
-packages = find_packages()
+packages = find_packages(exclude=['tests'])
 
 # Get the version string. Cannot be done with import!
 g = {}
