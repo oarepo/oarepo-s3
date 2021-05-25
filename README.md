@@ -61,11 +61,7 @@ files = record.files  # Record instance FilesIterator
 mu = MultipartUpload(key='filename',
                      base_uri=files.bucket.location.uri,
                      expires=3600,
-                     size=1024*1024*1000,  # total file size
-                     part_size=None,
-                     # completion resources as registered in blueprints, see below
-                     complete_url='/records/1/files/filename/multipart-complete',
-                     abort_url='/records/1/files/filename/multipart-abort')
+                     size=1024*1024*1000)  # total file size
 
 # Assigning a MultipartUpload to the FilesIterator here will
 # trigger the multipart upload creation on the S3 storage backend.
@@ -82,20 +78,21 @@ uploader client finishes uploading all the parts to the S3 backend,
 one needs to register the provided resources from `oarepo_s3.views` in
 the app blueprints:
 
-```python
-def multipart_actions(code, files, rest_endpoint, extra, is_draft):
-    # rest path -> view
-    return {
-        'files/<key>/complete-multipart':
-            MultipartUploadCompleteResource.as_view(
-                MultipartUploadCompleteResource.view_name.format(endpoint=code)
-            ),
-        'files/<key>/abort-multipart':
-            MultipartUploadAbortResource.as_view(
-                MultipartUploadAbortResource.view_name.format(endpoint=code)
-            )
-    }
-```
+### Create multipart upload
+- `files/<key>/?multipart=True`
+
+### Create presigned URL for part upload
+- `files/<key>/<upload_id>/<part_num>/presigned`
+
+### List uploaded parts for a given multipart upload
+- `files/<key>/<upload_id>/parts`
+
+### Complete a multipart upload
+
+- `files/<key>/<upload_id>/complete`
+
+### Abort an ongoing multipart upload
+- `files/<key>/<upload_id>/abort`
 
 ## OARepo Records Draft integration
 
@@ -114,7 +111,7 @@ Doing so, will auto-register the following file API actions on the draft
 endpoints:
 
 ### Create multipart upload
-```
+```http request
 POST /draft/records/<pid>/files/?multipart=True
 {
   "key": "filename.txt",
@@ -123,17 +120,27 @@ POST /draft/records/<pid>/files/?multipart=True
 }
 ```
 
-### Complete multipart upload
+### Get presigned URL for part upload
+```http request
+GET /draft/records/<pid>/files/<key>/<upload_id>/<part_num>/presigned
 ```
-POST /draft/records/<pid>/files/<key>/complete-multipart
+
+### List uploaded parts for a given multipart upload
+```http request
+GET /draft/records/<pid>/files/<key>/<upload_id>/parts
+```
+
+### Complete multipart upload
+```http request
+POST /draft/records/<pid>/files/<key>/<upload_id>/complete
 {
   "parts": [{"ETag": <uploaded_part_etag>, PartNum: <part_num>},...]
 }
 ```
 
 ### Abort multipart upload
-```
-POST /draft/records/<pid>/files/<key>/abort-multipart
+```http request
+DELETE /draft/records/<pid>/files/<key>/<upload_id>/abort
 ```
 
 ## Tasks
