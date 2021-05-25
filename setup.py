@@ -13,12 +13,18 @@ from setuptools import find_packages, setup
 readme = open('README.md').read()
 history = open('CHANGES.rst').read()
 
-extras_require = {'tests': {
-    'moto[s3]==1.3.16',
-    'oarepo-records-draft==5.5.2',
-    'mock==4.0.3'
-}, 'all': []}
+tests_require = [
+]
 
+extras_require = {
+    'tests': {
+        'moto[s3]==1.3.16',
+        'oarepo-records-draft==5.5.2',
+        'mock==4.0.3'
+    }
+}
+
+extras_require['all'] = []
 for reqs in extras_require.values():
     extras_require['all'].extend(reqs)
 
