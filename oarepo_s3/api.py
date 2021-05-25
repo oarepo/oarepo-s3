@@ -82,11 +82,12 @@ def create_multipart_upload_response_factory(file_obj):
         exp_val = tags.get(MULTIPART_EXPIRATION_TAG, None)
 
         mc = json.loads(mc_val) if mc_val else {}
-
-        return {
-            'key': mc['key'],
-            'uploadId': mc['upload_id'],
-        }
+        if mc:
+            return {
+                'key': mc['key'],
+                'uploadId': mc['upload_id'],
+            }
+        return file_obj.dumps(),
 
     return inner
 

@@ -97,7 +97,6 @@ class S3Client(object):
 
         return _list_parts_page(0)
 
-
     def complete_multipart_upload(self, bucket, key, upload_id, parts):
         """Complete a multipart upload, combining all the parts into a single object in the S3 bucket."""
         return self.client.complete_multipart_upload(Bucket=bucket,

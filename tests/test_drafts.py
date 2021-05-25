@@ -28,20 +28,19 @@ def test_draft_integration(app, draft_record, client):
             'size': fsize
         })
     assert resp.status_code == 201
-    assert 'multipart_upload' in resp.json
+    assert 'uploadId' in resp.json
 
-    complete_url = resp.json['multipart_upload']['complete_url']
-    abort_url = resp.json['multipart_upload']['abort_url']
+    complete_url = f"/draft/records/1/files/test.txt/{resp.json['uploadId']}/complete"
+    abort_url = f"/draft/records/1/files/test.txt/{resp.json['uploadId']}/abort"
 
     assert complete_url and abort_url
 
     # Test in-progress upload can be aborted once
-    resp = client.post(abort_url)
+    resp = client.delete(abort_url)
     assert resp.status_code == 200
-    assert resp.json['status'] == 'aborted'
 
     # Test that aborted file doesn't exist anymore
-    resp = client.post(abort_url)
+    resp = client.delete(abort_url)
     assert resp.status_code == 404
 
     resp = client.get('/draft/records/1/files/')
@@ -67,7 +66,7 @@ def test_draft_integration(app, draft_record, client):
             'size': fsize
         })
     assert resp.status_code == 201
-    complete_url = resp.json['multipart_upload']['complete_url']
+    complete_url = f"/draft/records/1/files/test2.txt/{resp.json['uploadId']}/complete"
 
     resp = client.post(
         complete_url,
@@ -76,7 +75,7 @@ def test_draft_integration(app, draft_record, client):
         )
     )
     assert resp.status_code == 200
-    assert 'etag:test' in resp.json['checksum']
+    assert 'location' in resp.json.keys()
 
     # Test file download redirects to s3
     resp = client.get('/draft/records/1/files/test2.txt')
@@ -95,22 +94,14 @@ def test_draft_integration(app, draft_record, client):
         content_type='text/plain')
     assert resp.status_code == 201
 
-    # Test complete on a non-multipart file fails
-    resp = client.post(
-        '/draft/records/1/files/nmp.txt/complete-multipart',
-        json=dict(
-            parts=[]
-        ))
-    assert resp.status_code == 400
-
     # Test complete on a non-existent file fails
     resp = client.post(
-        '/draft/records/1/files/nope/complete-multipart',
+        '/draft/records/1/files/nope/neither/complete',
         json=dict(
             parts=[]
         ))
     assert resp.status_code == 404
 
     # Test abort on a non-multipart file fails
-    resp = client.post('/draft/records/1/files/nmp.txt/abort-multipart')
+    resp = client.delete('/draft/records/1/files/nmp.txt/nope/abort')
     assert resp.status_code == 400

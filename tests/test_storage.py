@@ -20,7 +20,7 @@ def test_multipart_save(app, draft_record, s3storage, prepare_es):
                          base_uri=files.bucket.location.uri,
                          expires=3600,
                          size=fsize,
-                         part_size=None,
+                         content_type='image/jpeg',
                          complete_url=None,
                          abort_url=None)
 
@@ -29,10 +29,7 @@ def test_multipart_save(app, draft_record, s3storage, prepare_es):
 
     assert file.get('checksum') is None
     assert file.get('size') == fsize
-    assert all([key in mu.session.keys() for key in ['parts_url',
-                                                     'chunk_size', 'upload_id',
-                                                     'num_chunks', 'bucket']])
-    assert len(mu.session['parts_url']) == int(mu.session['num_chunks'])
+    assert all([key in mu.response.keys() for key in ['key', 'upload_id', 'bucket']])
 
 
 def test_save(app, record, s3storage, prepare_es, generic_file):
@@ -42,8 +39,8 @@ def test_save(app, record, s3storage, prepare_es, generic_file):
                          base_uri='s3://test_invenio_s3',
                          expires=3600,
                          size=fsize,
-                         part_size=None,
                          complete_url=None,
+                         content_type='image/jpeg',
                          abort_url=None)
 
     res = s3storage.save(generic_file)
