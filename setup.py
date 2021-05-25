@@ -21,7 +21,7 @@ extras_require = {
     'tests': {
         'oarepo[tests]>=3.3.46',
         *tests_require,
-        # 'oarepo-records-draft>=5.5.2',
+        'oarepo-records-draft>=5.5.2',
         'mock'
     }
 }
