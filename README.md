@@ -115,7 +115,7 @@ endpoints:
 POST /draft/records/<pid>/files/?multipart=True
 {
   "key": "filename.txt",
-  "multipart_content_type": "text/plain",
+  "ctype": "text/plain",
   "size": 1024
 }
 ```

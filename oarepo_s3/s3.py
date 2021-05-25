@@ -106,4 +106,5 @@ class S3Client(object):
 
     def abort_multipart_upload(self, bucket, key, upload_id):
         """Cancels an in-progress multipart upload to AWS S3."""
-        return self.client.abort_multipart_upload(bucket, key, upload_id)
+        return self.client.abort_multipart_upload(Bucket=bucket, Key=key, UploadId=upload_id)
+

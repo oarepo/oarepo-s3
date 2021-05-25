@@ -126,11 +126,6 @@ def pass_multipart_config(f):
 
 def delete_file_object_version(bucket, obj):
     """Permanently delete a specific object version."""
-    check_permission(
-        current_permission_factory(bucket, 'object-delete-version'),
-        hidden=False,
-    )
-
     obj.remove()
     # Set newest object as head
     if obj.is_head:
