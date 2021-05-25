@@ -110,11 +110,11 @@ class MockedS3Client(S3Client):
                 "finish_url": ""
                 }
 
-    def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
+    def complete_multipart_upload(self, bucket, key, parts, upload_id):
         """Faked complete of a multipart upload to AWS S3."""
         return {'status': 'completed', 'ETag': 'etag:test'}
 
-    def abort_multipart_upload(self, bucket, object_name, upload_id):
+    def abort_multipart_upload(self, bucket, key, upload_id):
         """Faked cancel of an in-progress multipart upload to AWS S3."""
         return {'status': 'aborted'}
 

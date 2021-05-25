@@ -51,7 +51,6 @@ from invenio_files_rest.signals import file_deleted
 from invenio_files_rest.tasks import remove_file_data
 from invenio_files_rest.views import check_permission
 from invenio_records_rest.errors import PIDResolveRESTError
-from invenio_records_rest.views import pass_record
 from invenio_rest import csrf
 from sqlalchemy.exc import SQLAlchemyError
 from webargs import fields
@@ -76,6 +75,7 @@ def pass_locked_record(f):
     pattern and resolve it to a PID and a record, which are then available in
     the decorated function as ``pid`` and ``record`` kwargs respectively.
     """
+
     @wraps(f)
     def inner(self, pid_value, *args, **kwargs):
         try:
@@ -84,6 +84,7 @@ def pass_locked_record(f):
             return f(self, pid=pid, record=record, *args, **kwargs)
         except SQLAlchemyError:
             raise PIDResolveRESTError(pid_value)
+
     return inner
 
 
@@ -162,18 +163,19 @@ class MultipartUploadCompleteResource(MethodView):
     @pass_file_rec
     @pass_multipart_config
     @use_kwargs(multipart_complete_args)
-    def post(self, pid, record, key, files, file_rec, multipart_config, parts):
+    def post(self, pid, record, key, files, file_rec, multipart_config, upload_id, parts):
+        if multipart_config['upload_id'] != upload_id:
+            abort(404)
+
         before_upload_complete.send(file_rec,
                                     record=record,
                                     file=file_rec,
-                                    parts=parts,
                                     multipart_config=multipart_config)
 
-        res = current_s3.client.complete_multipart_upload(
-            multipart_config['bucket'],
-            multipart_config['key'],
-            parts,
-            multipart_config['upload_id'])
+        res = current_s3.client.complete_multipart_upload(bucket=multipart_config['bucket'],
+                                                          key=multipart_config['key'],
+                                                          upload_id=upload_id,
+                                                          parts=parts)
 
         with db.session.begin_nested():
             ObjectVersionTag.delete(file_rec.obj, MULTIPART_CONFIG_TAG)
@@ -189,7 +191,7 @@ class MultipartUploadCompleteResource(MethodView):
             record.commit()
 
         db.session.commit()
-        return jsonify(file_rec.dumps())
+        return jsonify({'location': file_rec.data['url']})
 
 
 class MultipartUploadAbortResource(MethodView):
@@ -199,16 +201,19 @@ class MultipartUploadAbortResource(MethodView):
     @pass_locked_record
     @pass_file_rec
     @pass_multipart_config
-    def post(self, pid, record, files, file_rec, multipart_config, key):
+    def delete(self, pid, record, files, file_rec, multipart_config, key, upload_id):
+        if multipart_config['upload_id'] != upload_id:
+            abort(404)
+
         before_upload_abort.send(file_rec,
                                  record=record,
                                  file=file_rec,
                                  multipart_config=multipart_config)
 
         res = current_s3.client.abort_multipart_upload(
-            multipart_config['bucket'],
-            multipart_config['key'],
-            multipart_config['upload_id'])
+            bucket=multipart_config['bucket'],
+            key=multipart_config['key'],
+            upload_id=upload_id)
 
         with db.session.begin_nested():
             delete_file_object_version(file_rec.bucket, file_rec.obj)
@@ -223,7 +228,49 @@ class MultipartUploadAbortResource(MethodView):
 
         after_upload_abort.send(file_rec, record=record, file=file_rec)
 
-        return jsonify(res)
+        return jsonify({})
+
+
+class UploadedPartsResource(MethodView):
+    """Resource for uploaded parts in a multipart upload."""
+    view_name = '{endpoint}_uploaded_parts'
+
+    @pass_locked_record
+    @pass_file_rec
+    @pass_multipart_config
+    def get(self, pid, record, files, file_rec, multipart_config, key, upload_id):
+        if multipart_config['upload_id'] != upload_id:
+            abort(404)
+
+        parts = current_s3.client.get_uploaded_parts(bucket=multipart_config['bucket'],
+                                                           key=multipart_config['key'],
+                                                           upload_id=upload_id)
+
+        return jsonify(parts)
+
+
+class PresignedPartResource(MethodView):
+    """Presigned Part Upload URL Resource."""
+    view_name = '{endpoint}_presigned_part'
+
+    @pass_locked_record
+    @pass_file_rec
+    @pass_multipart_config
+    def get(self, pid, record, files, file_rec, multipart_config, key, upload_id, part_num):
+        if multipart_config['upload_id'] != upload_id:
+            abort(404)
+
+        try:
+            part_num = int(part_num)
+        except ValueError:
+            abort(400)
+
+        presigned_url = current_s3.client.sign_part_upload(bucket=multipart_config['bucket'],
+                                                           key=multipart_config['key'],
+                                                           upload_id=upload_id,
+                                                           part_num=part_num)
+
+        return jsonify({'url': presigned_url})
 
 
 def multipart_actions(code, files, rest_endpoint, extra, is_draft):
@@ -231,11 +278,19 @@ def multipart_actions(code, files, rest_endpoint, extra, is_draft):
     # resource and return blueprint mapping
     # rest path -> view
     return {
-        'files/<key>/complete-multipart':
+        'files/<key>/<upload_id>/<part_num>/presigned':
+            csrf.exempt(PresignedPartResource.as_view(
+                PresignedPartResource.view_name.format(endpoint=code)
+            )),
+        'files/<key>/<upload_id>/parts':
+            csrf.exempt(UploadedPartsResource.as_view(
+                UploadedPartsResource.view_name.format(endpoint=code)
+            )),
+        'files/<key>/<upload_id>/complete':
             csrf.exempt(MultipartUploadCompleteResource.as_view(
                 MultipartUploadCompleteResource.view_name.format(endpoint=code)
             )),
-        'files/<key>/abort-multipart':
+        'files/<key>/<upload_id>/abort':
             csrf.exempt(MultipartUploadAbortResource.as_view(
                 MultipartUploadAbortResource.view_name.format(endpoint=code)
             ))

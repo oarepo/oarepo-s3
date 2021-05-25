@@ -42,7 +42,7 @@ more detailed description in :any:`configuration`.
 import json
 from datetime import datetime, timedelta
 
-from flask import current_app
+from flask import current_app, jsonify
 from invenio_db import db
 from invenio_files_rest.models import ObjectVersion, ObjectVersionTag
 from webargs import fields
@@ -51,21 +51,27 @@ from webargs.flaskparser import use_kwargs
 from oarepo_s3.constants import MULTIPART_CONFIG_TAG, MULTIPART_EXPIRATION_TAG
 
 multipart_init_args = {
+    'ctype': fields.Str(
+        locations=('query', 'json', 'form'),
+        missing='application/octet-stream',
+        load_from='type',
+        data_key='type',
+    ),
     'size': fields.Int(
         locations=('query', 'json', 'form'),
         missing=None,
     ),
-    'part_size': fields.Int(
-        locations=('query', 'json', 'form'),
-        missing=None,
-        load_from='partSize',
-        data_key='partSize',
-    ),
+    # 'part_size': fields.Int(
+    #     locations=('query', 'json', 'form'),
+    #     missing=None,
+    #     load_from='partSize',
+    #     data_key='partSize',
+    # ),
     'multipart': fields.Boolean(default=False, locations=('query',))
 }
 
 
-def multipart_init_response_factory(file_obj):
+def create_multipart_upload_response_factory(file_obj):
     """Factory for creation of multipart initialization response."""
 
     def inner():
@@ -75,14 +81,13 @@ def multipart_init_response_factory(file_obj):
         mc_val = tags.get(MULTIPART_CONFIG_TAG, None)
         exp_val = tags.get(MULTIPART_EXPIRATION_TAG, None)
 
-        mc = {'multipart_upload': json.loads(mc_val)} if mc_val else {}
-        exp = {'expiration': exp_val} if exp_val else {}
-
-        return {
-            **file_obj.dumps(),
-            **mc,
-            **exp
-        }
+        mc = json.loads(mc_val) if mc_val else {}
+        if mc:
+            return {
+                'key': mc['key'],
+                'uploadId': mc['upload_id'],
+            }
+        return file_obj.dumps(),
 
     return inner
 
@@ -90,45 +95,44 @@ def multipart_init_response_factory(file_obj):
 class MultipartUpload(object):
     """Class representing a multipart file upload to S3."""
 
-    def __init__(self, key, expires, size,
-                 part_size=None, complete_url=None,
+    def __init__(self, key, expires, size, content_type, complete_url=None,
                  abort_url=None, base_uri=None):
         """Initialize a multipart-upload session."""
         self.key = key
         self.expires = expires
         self.uploadId = None
-        self.size = size
-        self.part_size = part_size
         self.base_uri = base_uri
-        self.session = {}
+        self.response = {}
+        self.size = size
         self.complete_url = complete_url
         self.abort_url = abort_url
+        self.content_type = content_type
 
 
 @use_kwargs(multipart_init_args)
 def multipart_uploader(record, key, files, pid, request, endpoint,
-                       resolver, size=None, part_size=None,
-                       multipart=False, **kwargs):
+                       resolver, ctype, size=None, multipart=False, **kwargs):
     """Multipart upload handler."""
     from oarepo_s3.views import MultipartUploadAbortResource, \
         MultipartUploadCompleteResource
 
     expiration = current_app.config['S3_MULTIPART_UPLOAD_EXPIRATION']
     date_expiry = datetime.utcnow() + timedelta(seconds=expiration)
-    complete = resolver(MultipartUploadCompleteResource.view_name, key=key)
-    abort = resolver(MultipartUploadAbortResource.view_name, key=key)
 
     if multipart and size:
         mu = MultipartUpload(key=key,
                              base_uri=files.bucket.location.uri,
                              expires=expiration,
                              size=size,
-                             part_size=part_size,
-                             complete_url=complete,
-                             abort_url=abort)
+                             content_type=ctype)
 
         files[key] = mu
         file_obj = files[key]
+
+        complete = resolver(MultipartUploadCompleteResource.view_name, key=key, upload_id=mu.response['upload_id'])
+        abort = resolver(MultipartUploadAbortResource.view_name, key=key, upload_id=mu.response['upload_id'])
+        mu.complete_url = complete
+        mu.abort_url = abort
 
         with db.session.begin_nested():
             # create tags with multipart upload configuration
@@ -136,7 +140,7 @@ def multipart_uploader(record, key, files, pid, request, endpoint,
                 object_version=file_obj.obj,
                 key=MULTIPART_CONFIG_TAG,
                 value=json.dumps(dict(
-                    **mu.session,
+                    **mu.response,
                     complete_url=mu.complete_url,
                     abort_url=mu.abort_url,
                 )))
@@ -152,4 +156,4 @@ def multipart_uploader(record, key, files, pid, request, endpoint,
     else:
         files[key] = request.stream
 
-    return multipart_init_response_factory(files[key])
+    return create_multipart_upload_response_factory(files[key])

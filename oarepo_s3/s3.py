@@ -41,8 +41,6 @@ more detailed description in :any:`configuration`.
 """
 from s3_client_lib.s3_multipart_client import S3MultipartClient
 
-from oarepo_s3.proxies import current_s3
-
 
 class S3Client(object):
     """S3 client for communication with AWS S3 APIs."""
@@ -54,28 +52,58 @@ class S3Client(object):
         self.client_kwargs = client_kwargs
         self.config_kwargs = config_kwargs
         self.client = S3MultipartClient(
-            self.endpoint_url, access_key, secret_key, tenant)
+            self.endpoint_url, access_key, secret_key, tenant).client
 
-    def init_multipart_upload(self, bucket, object_name, object_size):
+    def create_multipart_upload(self, bucket, key, content_type, metadata=None):
         """Creates a multipart upload to AWS S3 API and returns
            session configuration with pre-signed urls.
         """
-        return self.client.signed_s3_multipart_upload(bucket=bucket,
-                                                      object_name=object_name,
-                                                      size=object_size,
-                                                      checksum_update=None,
-                                                      origin=None,
-                                                      finish_url=None)
 
-    def complete_multipart_upload(self, bucket, object_name, parts, upload_id):
-        """Completes a multipart upload to AWS S3."""
-        res = self.client.finish_multipart_upload(
-            bucket, object_name, parts, upload_id)
-        self.client.finish_file_metadata(
-            bucket, object_name, object_name)
-        return res
+        # See https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.create_multipart_upload
+        response = self.client.create_multipart_upload(
+            ACL='public-read',
+            Bucket=bucket,
+            ContentType=content_type,
+            Key=key,
+            Metadata=metadata or {},
+        )
+        return {'key': response['Key'], 'bucket': response['Bucket'], 'upload_id': response['UploadId']}
 
-    def abort_multipart_upload(self, bucket, object_name, upload_id):
+    def sign_part_upload(self, bucket, key, upload_id, part_num):
+        """Get parameters for uploading one part of a multipart upload."""
+        return self.client.generate_presigned_url('upload_part',
+                                                  Params=dict(Bucket=bucket,
+                                                              Key=key,
+                                                              UploadId=upload_id,
+                                                              PartNumber=part_num,
+                                                              Body=''))
+
+    def get_uploaded_parts(self, bucket, key, upload_id):
+        """List parts that have been fully uploaded so far."""
+        parts = []
+
+        def _list_parts_page(start_at):
+            nonlocal parts
+            part_data = self.client.list_parts(Bucket=bucket,
+                                               Key=key,
+                                               UploadId=upload_id,
+                                               PartNumberMarker=start_at)
+
+            parts += part_data.get('Parts', [])
+            if (part_data['IsTruncated']):
+                _list_parts_page(part_data['NextPartNumberMarker'])
+            else:
+                return parts
+
+        return _list_parts_page(0)
+
+    def complete_multipart_upload(self, bucket, key, upload_id, parts):
+        """Complete a multipart upload, combining all the parts into a single object in the S3 bucket."""
+        return self.client.complete_multipart_upload(Bucket=bucket,
+                                                     Key=key,
+                                                     MultipartUpload={'Parts': parts},
+                                                     UploadId=upload_id)
+
+    def abort_multipart_upload(self, bucket, key, upload_id):
         """Cancels an in-progress multipart upload to AWS S3."""
-        return self.client.abort_multipart_upload(
-            bucket, object_name, upload_id)
+        return self.client.abort_multipart_upload(bucket, key, upload_id)

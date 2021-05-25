@@ -12,20 +12,19 @@ from setuptools import find_packages, setup
 
 readme = open('README.md').read()
 history = open('CHANGES.rst').read()
+OAREPO_VERSION = os.environ.get('OAREPO_VERSION', '3.3.0')
 
 tests_require = [
-    'moto[s3]>=1.3.7',
+    'moto[s3]>=1.3.16',
+    'oarepo-records-draft>=5.5.2',
+    'mock>=4.0.3'
 ]
 
 extras_require = {
-    'docs': [
-        'Sphinx>=1.5.1,<3.0.2',
-    ],
-    'tests': {
-        'oarepo[tests]>=3.3.46',
-        *tests_require,
-        'oarepo-records-draft>=5.5.2',
-    }
+    'tests': [
+        'oarepo[tests]~={version}'.format(version=OAREPO_VERSION),
+        *tests_require
+    ]
 }
 
 extras_require['all'] = []
@@ -37,7 +36,7 @@ setup_requires = [
 ]
 
 install_requires = [
-    'invenio-s3>=1.0.3',
+    'invenio-s3==1.0.3',
 ]
 
 packages = find_packages(exclude=['tests'])
