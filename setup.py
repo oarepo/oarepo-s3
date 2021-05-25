@@ -13,20 +13,12 @@ from setuptools import find_packages, setup
 readme = open('README.md').read()
 history = open('CHANGES.rst').read()
 
-tests_require = [
+extras_require = {'tests': {
     'moto[s3]==1.3.16',
-]
+    'oarepo-records-draft==5.5.2',
+    'mock==4.0.3'
+}, 'all': []}
 
-extras_require = {
-    'tests': {
-        'oarepo[tests]==3.3.47',
-        *tests_require,
-        'oarepo-records-draft==5.5.2',
-        'mock==4.0.3'
-    }
-}
-
-extras_require['all'] = []
 for reqs in extras_require.values():
     extras_require['all'].extend(reqs)
 
@@ -35,7 +27,7 @@ setup_requires = [
 ]
 
 install_requires = [
-    'invenio-s3>=1.0.3',
+    'invenio-s3==1.0.3',
 ]
 
 packages = find_packages(exclude=['tests'])
