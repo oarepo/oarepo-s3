@@ -12,16 +12,19 @@ from setuptools import find_packages, setup
 
 readme = open('README.md').read()
 history = open('CHANGES.rst').read()
+OAREPO_VERSION = os.environ.get('OAREPO_VERSION', '3.3.0')
 
 tests_require = [
+    'moto[s3]==1.3.16',
+    'oarepo-records-draft==5.5.2',
+    'mock==4.0.3'
 ]
 
 extras_require = {
-    'tests': {
-        'moto[s3]==1.3.16',
-        'oarepo-records-draft==5.5.2',
-        'mock==4.0.3'
-    }
+    'tests': [
+        'oarepo[tests]~={version}'.format(version=OAREPO_VERSION),
+        *tests_require
+    ]
 }
 
 extras_require['all'] = []
