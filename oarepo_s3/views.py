@@ -45,8 +45,6 @@ from functools import wraps
 from flask import abort, jsonify, request
 from flask.views import MethodView
 from invenio_db import db
-from webargs import fields
-from webargs.flaskparser import use_kwargs
 from invenio_files_rest.models import ObjectVersion, ObjectVersionTag
 from invenio_files_rest.proxies import current_permission_factory
 from invenio_files_rest.signals import file_deleted
@@ -54,12 +52,14 @@ from invenio_files_rest.tasks import remove_file_data
 from invenio_files_rest.views import check_permission
 from invenio_records_rest.errors import PIDResolveRESTError
 from invenio_rest import csrf
+from sqlalchemy.exc import SQLAlchemyError
+from webargs import fields
+from webargs.flaskparser import use_kwargs
+
 from oarepo_s3.constants import MULTIPART_CONFIG_TAG, MULTIPART_EXPIRATION_TAG
 from oarepo_s3.proxies import current_s3
 from oarepo_s3.signals import after_upload_abort, after_upload_complete, \
     before_upload_abort, before_upload_complete
-from sqlalchemy.exc import SQLAlchemyError
-
 
 multipart_complete_args = {
     'parts': fields.List(
