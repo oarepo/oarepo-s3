@@ -19,10 +19,10 @@ tests_require = [
 
 extras_require = {
     'tests': {
-        'oarepo[tests]>=3.3.46',
+        'oarepo[tests]==3.3.47',
         *tests_require,
-        'oarepo-records-draft>=5.5.2',
-        'mock'
+        'oarepo-records-draft==5.5.2',
+        'mock==4.0.3'
     }
 }
 
