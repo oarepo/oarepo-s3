@@ -7,7 +7,7 @@
 """Drafts integration tests."""
 import io
 
-from celery.contrib.pytest import celery_worker, celery_session_worker
+from celery.contrib.pytest import celery_session_worker
 from mock import patch
 
 from tests.utils import draft_entrypoints
