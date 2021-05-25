@@ -14,7 +14,7 @@ readme = open('README.md').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
-    'moto[s3]<2.0.0',
+    'moto[s3]==1.3.16',
 ]
 
 extras_require = {
