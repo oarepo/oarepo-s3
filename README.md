@@ -134,7 +134,7 @@ GET /draft/records/<pid>/files/<key>/<upload_id>/parts
 ```http request
 POST /draft/records/<pid>/files/<key>/<upload_id>/complete
 {
-  "parts": [{"ETag": <uploaded_part_etag>, PartNum: <part_num>},...]
+  "parts": [{"ETag": <uploaded_part_etag>, "PartNumber": <part_num>},...]
 }
 ```
 
