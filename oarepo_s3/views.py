@@ -41,6 +41,7 @@ more detailed description in :any:`configuration`.
 """
 import json
 from functools import wraps
+from urllib.parse import unquote
 
 from flask import abort, jsonify, request
 from flask.views import MethodView
@@ -252,7 +253,7 @@ class PresignedPartResource(MethodView):
     def get(self, pid, record, files, file_rec, multipart_config, key, upload_id, part_ids):
         part_numbers = []
         presigned_urls = {}
-        parts = part_ids.split(',')
+        parts = unquote(part_ids).split(',')
 
         if multipart_config['upload_id'] != upload_id:
             abort(404)
