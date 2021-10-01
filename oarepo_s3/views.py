@@ -251,7 +251,7 @@ class PresignedPartResource(MethodView):
     @pass_multipart_config
     def get(self, pid, record, files, file_rec, multipart_config, key, upload_id, part_ids):
         part_numbers = []
-        presigned_urls = []
+        presigned_urls = {}
         parts = part_ids.split(',')
 
         if multipart_config['upload_id'] != upload_id:
@@ -263,10 +263,10 @@ class PresignedPartResource(MethodView):
             abort(400, 'the part numbers must be a number between 1 and 10000')
 
         for part_num in part_numbers:
-            presigned_urls.append({part_num: current_s3.client.sign_part_upload(bucket=multipart_config['bucket'],
-                                                                     key=multipart_config['key'],
-                                                                     upload_id=upload_id,
-                                                                     part_num=part_num)})
+            presigned_urls[part_num] = current_s3.client.sign_part_upload(bucket=multipart_config['bucket'],
+                                                                          key=multipart_config['key'],
+                                                                          upload_id=upload_id,
+                                                                          part_num=part_num)
 
         return jsonify({'presignedUrls': presigned_urls})
 
