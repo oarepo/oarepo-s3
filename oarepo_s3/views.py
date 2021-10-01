@@ -46,10 +46,8 @@ from flask import abort, jsonify, request
 from flask.views import MethodView
 from invenio_db import db
 from invenio_files_rest.models import ObjectVersion, ObjectVersionTag
-from invenio_files_rest.proxies import current_permission_factory
 from invenio_files_rest.signals import file_deleted
 from invenio_files_rest.tasks import remove_file_data
-from invenio_files_rest.views import check_permission
 from invenio_records_rest.errors import PIDResolveRESTError
 from invenio_rest import csrf
 from sqlalchemy.exc import SQLAlchemyError
@@ -238,8 +236,8 @@ class UploadedPartsResource(MethodView):
             abort(404)
 
         parts = current_s3.client.get_uploaded_parts(bucket=multipart_config['bucket'],
-                                                           key=multipart_config['key'],
-                                                           upload_id=upload_id)
+                                                     key=multipart_config['key'],
+                                                     upload_id=upload_id)
 
         return jsonify(parts)
 
@@ -251,21 +249,26 @@ class PresignedPartResource(MethodView):
     @pass_locked_record
     @pass_file_rec
     @pass_multipart_config
-    def get(self, pid, record, files, file_rec, multipart_config, key, upload_id, part_num):
+    def get(self, pid, record, files, file_rec, multipart_config, key, upload_id, part_ids):
+        part_numbers = []
+        presigned_urls = []
+        parts = part_ids.split(',')
+
         if multipart_config['upload_id'] != upload_id:
             abort(404)
 
         try:
-            part_num = int(part_num)
+            part_numbers = map(int, parts)
         except ValueError:
-            abort(400)
+            abort(400, 'the part numbers must be a number between 1 and 10000')
 
-        presigned_url = current_s3.client.sign_part_upload(bucket=multipart_config['bucket'],
-                                                           key=multipart_config['key'],
-                                                           upload_id=upload_id,
-                                                           part_num=part_num)
+        for part_num in part_numbers:
+            presigned_urls.append({part_num: current_s3.client.sign_part_upload(bucket=multipart_config['bucket'],
+                                                                     key=multipart_config['key'],
+                                                                     upload_id=upload_id,
+                                                                     part_num=part_num)})
 
-        return jsonify({'url': presigned_url})
+        return jsonify({'presignedUrls': presigned_urls})
 
 
 def multipart_actions(code, files, rest_endpoint, extra, is_draft):
@@ -273,7 +276,7 @@ def multipart_actions(code, files, rest_endpoint, extra, is_draft):
     # resource and return blueprint mapping
     # rest path -> view
     return {
-        'files/<key>/<upload_id>/<part_num>/presigned':
+        'files/<key>/<upload_id>/<part_ids>/presigned':
             csrf.exempt(PresignedPartResource.as_view(
                 PresignedPartResource.view_name.format(endpoint=code)
             )),
