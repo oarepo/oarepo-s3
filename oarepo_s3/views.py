@@ -185,7 +185,10 @@ class MultipartUploadCompleteResource(MethodView):
             record.commit()
 
         db.session.commit()
-        return jsonify({'location': file_rec.data['url']})
+        return jsonify({
+            'location': file_rec.data['url'],
+            'checksum': file_rec['checksum']
+        })
 
 
 class MultipartUploadAbortResource(MethodView):
