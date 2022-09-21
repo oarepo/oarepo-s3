@@ -40,16 +40,15 @@ more detailed description in :any:`configuration`.
 
 """
 import json
+import urllib
 from functools import wraps
 
 from flask import abort, jsonify, request
 from flask.views import MethodView
 from invenio_db import db
 from invenio_files_rest.models import ObjectVersion, ObjectVersionTag
-from invenio_files_rest.proxies import current_permission_factory
 from invenio_files_rest.signals import file_deleted
 from invenio_files_rest.tasks import remove_file_data
-from invenio_files_rest.views import check_permission
 from invenio_records_rest.errors import PIDResolveRESTError
 from invenio_rest import csrf
 from sqlalchemy.exc import SQLAlchemyError
@@ -96,11 +95,12 @@ def pass_file_rec(f):
     @wraps(f)
     def inner(self, pid, record, key, *args, **kwargs):
         files = record.files
+        file_key = urllib.parse.unquote(key)
         try:
-            file_rec = files[key]
+            file_rec = files[file_key]
         except KeyError:
             abort(404, 'upload not found')
-        return f(self, pid=pid, record=record, key=key,
+        return f(self, pid=pid, record=record, key=file_key,
                  files=files, file_rec=file_rec, *args, **kwargs)
 
     return inner
