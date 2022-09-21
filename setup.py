@@ -37,6 +37,7 @@ setup_requires = [
 
 install_requires = [
     'invenio-s3==1.0.3',
+    'invenio-files-rest<=1.3.0'
 ]
 
 packages = find_packages(exclude=['tests'])
