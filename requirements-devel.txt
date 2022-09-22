@@ -5,5 +5,5 @@
 # oarepo-s3 is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICEN.
 
--e git+https://github.com/oarepo/invenio-files-rest.git#egg=invenio-files-rest
+git+https://github.com/CESNET/s3-client#egg=s3-client-lib
 -e git+git://github.com/dask/s3fs.git#egg=s3fs
