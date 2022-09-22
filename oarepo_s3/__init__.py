@@ -43,7 +43,8 @@ more detailed description in :any:`configuration`.
 from .ext import OARepoS3
 from .s3 import S3Client
 from .storage import S3FileStorage, s3_storage_factory
-from .version import __version__
+
+__version__ = '1.3.2'
 
 __all__ = (
     '__version__',
