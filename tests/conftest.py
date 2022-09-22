@@ -54,7 +54,6 @@ from oarepo_s3 import S3FileStorage
 from oarepo_s3.ext import OARepoS3
 from oarepo_s3.s3 import S3Client
 from tests.helpers import set_identity
-from tests.utils import draft_entrypoints
 
 SAMPLE_ALLOWED_SCHEMAS = [
     'http://localhost:5000/schemas/records/record-v1.0.0.json']
@@ -123,7 +122,7 @@ class JsonClient(FlaskClient):
     """Test REST JSON client."""
 
     def open(self, *args, **kwargs):
-        """Opens a new connection."""
+        """Open a new connection."""
         kwargs.setdefault('content_type', 'application/json')
         kwargs.setdefault('Accept', 'application/json')
         return super().open(*args, **kwargs)
@@ -497,7 +496,7 @@ def record(app, db, s3_location):
 
 @pytest.fixture()
 def draft_record(app, db, prepare_es, s3_location):
-    """Testing draft-enabled record."""
+    """Test draft-enabled record."""
     draft_uuid = uuid.uuid4()
     data = {
         'title': 'blah',

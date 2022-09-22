@@ -6,4 +6,4 @@
 # under the terms of the MIT License; see LICEN.
 
 git+https://github.com/CESNET/s3-client#egg=s3-client-lib
--e git+https://github.com/dask/s3fs.git@v0.2.2#egg=s3fs
+-e git+https://github.com/dask/s3fs.git@0.2.2#egg=s3fs
