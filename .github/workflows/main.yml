@@ -39,7 +39,7 @@ jobs:
         uses: nijel/rabbitmq-action@v1.0.0
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip==20.2.4 wheel 'setuptools<58.0'
+          python -m pip install --upgrade pip wheel 'setuptools<58.0'
           pip --disable-pip-version-check install 'oarepo[tests]>=3.3,<3.4'
           pip --disable-pip-version-check install --force-reinstall -r requirements-devel.txt
           pip --disable-pip-version-check install --force-reinstall -e .[tests]
