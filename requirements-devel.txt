@@ -4,5 +4,5 @@
 #
 # oarepo-s3 is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICEN.
--e git+https://github.com/dask/s3fs.git@0.2.2#egg=s3fs
+#-e git+https://github.com/dask/s3fs.git@0.2.2#egg=s3fs
 click==7.1.2
