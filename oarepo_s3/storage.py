@@ -10,11 +10,11 @@ from __future__ import absolute_import, division, print_function
 from functools import wraps
 
 from invenio_files_rest.storage import pyfs_storage_factory
+from s3fs.core import split_path
 
 from invenio_s3 import S3FSFileStorage
 from oarepo_s3.api import MultipartUpload
 from oarepo_s3.proxies import current_s3
-from s3fs.core import split_path
 
 
 def pass_bucket(f):

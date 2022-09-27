@@ -46,6 +46,10 @@
     }
   },
 
+  "containerEnv": {
+    "INVENIO_INSTANCE_PATH": "/home/vscode/invenio"
+  },
+
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [9000],
 
