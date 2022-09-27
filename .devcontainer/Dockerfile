@@ -19,9 +19,10 @@ RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/
 
 # [Optional] If your pip requirements rarely change, uncomment this section to add them to the image.
 COPY requirements-devel.txt /tmp/pip-tmp/
-RUN pip3 --disable-pip-version-check --no-cache-dir install --upgrade wheel 'setuptools<58.0'
-RUN pip3 --disable-pip-version-check --no-cache-dir install oarepo[tests]
-RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements-devel.txt && rm -rf /tmp/pip-tmp
+RUN python3 -m pip install --upgrade pip wheel 'setuptools<58.0'
+RUN pip3 --disable-pip-version-check install 'oarepo[tests]>=3.3,<3.4'
+RUN pip3 --disable-pip-version-check install --force-reinstall -r /tmp/pip-tmp/requirements-devel.txt
+RUN rm -rf /tmp/pip-tmp
 
 # [Optional] Uncomment this section to install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
