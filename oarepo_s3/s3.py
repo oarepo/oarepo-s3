@@ -91,7 +91,7 @@ class S3Client(object):
 
             parts += part_data.get('Parts', [])
             if (part_data['IsTruncated']):
-                _list_parts_page(part_data['NextPartNumberMarker'])
+                return _list_parts_page(part_data['NextPartNumberMarker'])
             else:
                 return parts
 
