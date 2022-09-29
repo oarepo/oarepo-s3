@@ -44,7 +44,7 @@ from oarepo_s3.ext import OARepoS3
 from oarepo_s3.s3 import S3Client
 from oarepo_s3.storage import S3FileStorage, s3_storage_factory
 
-__version__ = '1.3.3'
+__version__ = '1.4.5'
 
 __all__ = (
     '__version__',
