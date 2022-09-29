@@ -236,6 +236,9 @@ def app(base_app):
     base_app.url_map.converters['pid'] = PIDConverter
     base_app.register_blueprint(create_blueprint_from_app(base_app))
 
+    base_app._internal_jsonschemas._state.register_schemas_dir(os.path.join(
+        os.path.dirname(__file__), 'records', 'jsonschemas'))
+
     app_loaded.send(None, app=base_app)
 
     with base_app.app_context():

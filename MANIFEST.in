@@ -34,3 +34,4 @@ include docker-services.yml
 exclude .envrc
 recursive-exclude .vscode *
 recursive-exclude .devcontainer *
+exclude Dockerfile
