@@ -32,5 +32,3 @@ services:
         soft: -1
         hard: -1
     mem_limit: 1g
-    ports:
-    - 127.0.0.1:9200:9200

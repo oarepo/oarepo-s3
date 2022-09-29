@@ -15,7 +15,7 @@ from invenio_access import authenticated_user
 
 
 def set_identity(u):
-    """Sets identity in flask.g to the user."""
+    """Set identity in flask.g to the user."""
     identity = Identity(u.id)
     identity_changed.send(current_app._get_current_object(), identity=identity)
     assert flask.g.identity.id == u.id
@@ -23,7 +23,7 @@ def set_identity(u):
 
 @identity_loaded.connect
 def identity_loaded_callback(sender, identity=None, **kwargs):
-    """Callback for identity_loaded signal."""
+    """Call back for identity_loaded signal."""
     print('Identity loaded', identity, current_user)
     if not current_user.is_authenticated:
         return

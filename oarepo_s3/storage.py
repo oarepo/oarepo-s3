@@ -59,7 +59,8 @@ class S3FileStorage(S3FSFileStorage):
         urls on the multipartUpload to be used by the client to
         directly communicate with the S3 multipart APIs.
         """
-        mu.response = current_s3.client.create_multipart_upload(bucket=bucket, key=mu.key, content_type=mu.content_type)
+        mu.response = current_s3.client.create_multipart_upload(
+            bucket=bucket, key=mu.key, content_type=mu.content_type)
         assert mu.response['key'] == mu.key
         assert mu.response['bucket'] == bucket
 

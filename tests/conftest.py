@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function
 import hashlib
 import os
 import shutil
-import sys
+import tempfile
 import uuid
 from collections import namedtuple
 from io import BytesIO
@@ -54,7 +54,6 @@ from oarepo_s3 import S3FileStorage
 from oarepo_s3.ext import OARepoS3
 from oarepo_s3.s3 import S3Client
 from tests.helpers import set_identity
-from tests.utils import draft_entrypoints
 
 SAMPLE_ALLOWED_SCHEMAS = [
     'http://localhost:5000/schemas/records/record-v1.0.0.json']
@@ -123,7 +122,7 @@ class JsonClient(FlaskClient):
     """Test REST JSON client."""
 
     def open(self, *args, **kwargs):
-        """Opens a new connection."""
+        """Open a new connection."""
         kwargs.setdefault('content_type', 'application/json')
         kwargs.setdefault('Accept', 'application/json')
         return super().open(*args, **kwargs)
@@ -141,7 +140,8 @@ def celery_config():
 @pytest.fixture(scope='module')
 def base_app(app_config):
     """Flask application fixture."""
-    instance_path = os.path.join(sys.prefix, 'var', 'test-instance')
+    instance_path = os.path.join(
+        tempfile.gettempdir(), 'test-invenio-instance')
 
     # empty the instance path
     if os.path.exists(instance_path):
@@ -235,6 +235,9 @@ def app(base_app):
     InvenioPIDStore(base_app)
     base_app.url_map.converters['pid'] = PIDConverter
     base_app.register_blueprint(create_blueprint_from_app(base_app))
+
+    base_app._internal_jsonschemas._state.register_schemas_dir(os.path.join(
+        os.path.dirname(__file__), 'records', 'jsonschemas'))
 
     app_loaded.send(None, app=base_app)
 
@@ -497,7 +500,7 @@ def record(app, db, s3_location):
 
 @pytest.fixture()
 def draft_record(app, db, prepare_es, s3_location):
-    """Testing draft-enabled record."""
+    """Test draft-enabled record."""
     draft_uuid = uuid.uuid4()
     data = {
         'title': 'blah',

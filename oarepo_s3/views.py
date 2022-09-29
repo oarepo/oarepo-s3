@@ -95,11 +95,12 @@ def pass_file_rec(f):
     @wraps(f)
     def inner(self, pid, record, key, *args, **kwargs):
         files = record.files
+        file_key = unquote(key)
         try:
-            file_rec = files[key]
+            file_rec = files[file_key]
         except KeyError:
             abort(404, 'upload not found')
-        return f(self, pid=pid, record=record, key=key,
+        return f(self, pid=pid, record=record, key=file_key,
                  files=files, file_rec=file_rec, *args, **kwargs)
 
     return inner

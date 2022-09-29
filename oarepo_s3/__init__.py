@@ -40,12 +40,11 @@ more detailed description in :any:`configuration`.
 
 """
 
-from __future__ import absolute_import, print_function
+from oarepo_s3.ext import OARepoS3
+from oarepo_s3.s3 import S3Client
+from oarepo_s3.storage import S3FileStorage, s3_storage_factory
 
-from .ext import OARepoS3
-from .s3 import S3Client
-from .storage import S3FileStorage, s3_storage_factory
-from .version import __version__
+__version__ = '1.4.5'
 
 __all__ = (
     '__version__',
