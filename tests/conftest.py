@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function
 import hashlib
 import os
 import shutil
-import sys
+import tempfile
 import uuid
 from collections import namedtuple
 from io import BytesIO
@@ -140,7 +140,8 @@ def celery_config():
 @pytest.fixture(scope='module')
 def base_app(app_config):
     """Flask application fixture."""
-    instance_path = os.path.join(sys.prefix, 'var', 'test-instance')
+    instance_path = os.path.join(
+        tempfile.gettempdir(), 'test-invenio-instance')
 
     # empty the instance path
     if os.path.exists(instance_path):

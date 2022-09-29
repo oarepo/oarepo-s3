@@ -20,6 +20,12 @@
 #
 version: '2.3'
 services:
+  app:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    depends_on:
+      - mq
   cache:
     extends:
       file: docker-services.yml
